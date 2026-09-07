@@ -81,15 +81,18 @@ def run():
           f"B_total={B_TOTAL} (B1={B_1}+B2={B_2})\n", flush=True)
     rows = {p: [] for p in ['A_fresh_300', 'B_grow_150_150', 'C_fresh_150']}
     for sd in SEEDS:
-        # A: fresh big D=96, B_total
+        # A: fresh big D=96, B_total（P0: 先 seed 再建模型，seed 真控初始化）
+        torch.manual_seed(sd); np.random.seed(sd)
         mkA = FusedFW(D=D_BIG, N=4*D_BIG, k=K, use_ffn=True)
         va = train(mkA, B_TOTAL, sd)
-        # B: small D=64 train B1 -> grow to D_big -> train B2
+        # B: small D=64 train B1 -> grow to D_big -> train B2（同 sd，seed-先建）
+        torch.manual_seed(sd); np.random.seed(sd)
         small = FusedFW(D=D_SMALL, N=4*D_SMALL, k=K, use_ffn=True)
         train(small, B_1, sd)
         bigb = grow(small, D_BIG)
         vb = train(bigb, B_2, sd)
         # C: fresh big D=96 only B2
+        torch.manual_seed(sd); np.random.seed(sd)
         mkC = FusedFW(D=D_BIG, N=4*D_BIG, k=K, use_ffn=True)
         vc = train(mkC, B_2, sd)
         rows['A_fresh_300'].append(va); rows['B_grow_150_150'].append(vb); rows['C_fresh_150'].append(vc)

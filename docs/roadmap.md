@@ -7,9 +7,9 @@
 - 结果：小型 char-LM 上能力相当/略优 + 训练 1.2-1.4x + decode ~2.2x + prefill 长上下文 1.75x@4K。
 
 ## 待补（不动结论方向的覆盖扩展）
-- [ ] **batch 1 / 8 / 32**（v0.0.1 只跑了 batch 8）
-- [ ] **T = 8K**（v0.0.1 到 4K；8K 大窗口 CPU 慢，单独后台跑）
-- [ ] **GPU 列**（FlashAttention 基线）——需有卡，标"待补"不假装测过
+- [x] **batch 1 / 8 / 32**（`docs/FAIR_BENCH_V2_EXTENDED.md`，2026-09-07）：O(T) 优势跨 batch 成立；FW 长序快 2.8-5.6x，短序(~256)略慢~1.0-1.1x；decode 仍 FW ~2.1x。
+- [x] **T = 8K**（同上）：T 到 8192，FW/TF 单调降（batch1 到 0.18）；大窗口 FW 优势随 T 放大。
+- [ ] **GPU 列**（FlashAttention 基线）——需有卡，标"待补"不假装测过。
 
 ## 下一阶段候选（需先锁判据，一次一组变量）
 1. **真实模型蒸馏 benchmark**：审计 V11 §六 的门槛——"跑完 FAIR_BENCH_V2 才有资格决定进不进成熟开源模型蒸馏"。这是回答"能否替代 Transformer"的关键一役。

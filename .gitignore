@@ -20,6 +20,9 @@ results/**/*.json
 # 日志
 *.log
 
+# 内部审计/GPT 原始回复（不进公开仓库，仅本地自我参考）
+docs/GPT_AUDIT_GROWTH.md
+
 # 编辑器
 .idea/
 .vscode/

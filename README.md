@@ -14,6 +14,7 @@
 - ✗ Real-world downstream tasks（仅字符级语言建模）
 - ✗ Long-context quality evaluation（仅测到 T=4096 的 prefill/性能，未做长上下文质量评估）
 - ✗ Large-scale scaling（未做 10M+ 规模 scaling）
+- ✗ **不支持"增量长大复用"**：同预算下 warmstart 扩宽（D64→D96）**劣于重头训练**（+0.170，3 seed 稳）。**往更大规模扩 = 重头训练**（[`docs/GROWTH_INHERITANCE_REPORT.md`](docs/GROWTH_INHERITANCE_REPORT.md)）
 
 **这些限制让"能力相当/略优 + 结构降本"的结论只锚定小型 char-LM。"能否替代 Transformer"需真实模型蒸馏 benchmark 才能定论。**
 

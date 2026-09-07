@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "DynFW: Dynamic Fast-Weight Neural Networks (v0.0.1 Baseline)"
+type: software
+version: 0.0.1
+date-released: "2026-09-07"
+license: MIT
+authors:
+  - name: DynFW contributors
+repository-code: "https://github.com/sinoclaw/dynfw"
+keywords:
+  - fast-weight
+  - sparse-activation
+  - efficient-architecture
+  - language-model
+  - linear-complexity

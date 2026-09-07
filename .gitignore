@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# 大文件 / 数据
+data/
+*.pt
+*.pth
+*.ckpt
+
+# 结果（除冻结的 v0.0.1 JSON）
+results/**/*.json
+!results/v0.0.1/*.json
+
+# 日志
+*.log
+
+# 编辑器
+.idea/
+.vscode/
+.DS_Store

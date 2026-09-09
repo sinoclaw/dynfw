@@ -125,8 +125,8 @@ class DLAFastAttn(nn.Module):
             v_c = V[:, :, st:en]           # [B,1,w,D]
             w = en - st
             sim = q_c @ k_c.mT              # [B,nh,w,w]
-            causal = torch.tril(torch.ones(w, w, device=Q.device, dtype=torch.bool), diagonal=-1)
-            sim = sim.masked_fill(~causal, 0)
+            causal = torch.tril(torch.ones(w, w, device=Q.device, dtype=torch.bool), diagonal=0)
+            sim = sim.masked_fill(~causal, float('-inf'))
             attn = torch.softmax(sim.float(), dim=-1)
             agg = attn @ v_c                 # [B,nh,w,D]
             # DLA 检索: 对所有已用状态槽聚合 o = Σ_i φ(q)·S_i

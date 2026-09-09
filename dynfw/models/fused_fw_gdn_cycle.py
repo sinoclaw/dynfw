@@ -67,8 +67,8 @@ class GDNFastAttn(nn.Module):
             v_c = V[:, :, st:en]           # [B,1,w,D]
             w = en - st
             sim = q_c @ k_c.mT              # [B,nh,w,w]
-            causal = torch.tril(torch.ones(w, w, device=Q.device, dtype=torch.bool), diagonal=-1)
-            sim = sim.masked_fill(~causal, 0)
+            causal = torch.tril(torch.ones(w, w, device=Q.device, dtype=torch.bool), diagonal=0)
+            sim = sim.masked_fill(~causal, float('-inf'))
             attn = torch.softmax(sim.float(), dim=-1)
             agg = attn @ v_c                 # [B,nh,w,D]
             if new_mem is not None and (st > 0 or memories is not None):

@@ -64,9 +64,11 @@ class FWAttention(nn.Module):
             v_c = V[:, :, st:en]           # [B,1,w,D]
             w = en - st
             sim = q_c @ k_c.mT              # [B,nh,w,w]
-            # 因果 + 块内(不跨到更早的块; 跨块靠 fast-weight)
-            causal = torch.tril(torch.ones(w, w, device=Q.device, dtype=torch.bool), diagonal=-1)
-            sim = sim.masked_fill(~causal, 0)
+            # 因果掩码: 位置 i 看自己及之前 (diagonal=0, 对齐标准因果LM/教师语义)
+            #   ⚠️ 必须用 -inf (而非0) + softmax, 否则未来位置 softmax 后权重=1/Z≠0 → 泄漏未来
+            #   (原实现 masked_fill(~causal,0) 是因果bug; 已用探针验证 diagonal=0 无泄漏无NaN)
+            causal = torch.tril(torch.ones(w, w, device=Q.device, dtype=torch.bool), diagonal=0)
+            sim = sim.masked_fill(~causal, float('-inf'))
             attn = torch.softmax(sim.float(), dim=-1)  # [B,nh,w,w]
             agg = attn @ v_c                 # [B,nh,w,D]
             # 跨块 fast-weight 检索: 用当前 q 从历史状态检索

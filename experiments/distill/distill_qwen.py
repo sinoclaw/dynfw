@@ -62,6 +62,18 @@ def make_student(args, teacher_vocab, device):
                               n_layer=args.n_layer, steps=args.cycle_steps,
                               mlp_mult=args.mlp_mult, W=args.block)
 
+    elif args.arch == 'fusedfw_gdn_cycle':
+        from dynfw.models.fused_fw_gdn_cycle import BDHBlockGDNCycleLM
+        m = BDHBlockGDNCycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
+                              n_layer=args.n_layer, steps=args.cycle_steps,
+                              mlp_mult=args.mlp_mult, W=args.block)
+
+    elif args.arch == 'fusedfw_dla_cycle':
+        from dynfw.models.fused_fw_dla_cycle import BDHBlockDLACycleLM
+        m = BDHBlockDLACycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
+                               n_layer=args.n_layer, steps=args.cycle_steps,
+                               mlp_mult=args.mlp_mult, W=(args.dla_w if getattr(args,'dla_w',0)>0 else args.block), K=getattr(args,'dla_k',16))
+
 
     elif args.arch == 'fusedfw_full':
         m = FusedFWFull(D=args.dim, N=args.slots, k=args.k, nh=args.nh,
@@ -113,7 +125,7 @@ def main():
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     ap = argparse.ArgumentParser()
-    ap.add_argument('--arch', type=str, default='fusedfw', choices=['fusedfw', 'fusedfw_cycle', 'fusedfw_rec', 'fusedfw_la', 'fusedfw_la_cycle', 'fusedfw_fw_cycle', 'fusedfw_full', 'fusedfw_full_shared', 'fusedfw_lin', 'bdh_gla', 'bdh_gla2', 'bdh_gla3', 'bdh', 'tf'],
+    ap.add_argument('--arch', type=str, default='fusedfw', choices=['fusedfw', 'fusedfw_cycle', 'fusedfw_rec', 'fusedfw_la', 'fusedfw_la_cycle', 'fusedfw_fw_cycle', 'fusedfw_gdn_cycle', 'fusedfw_dla_cycle', 'fusedfw_full', 'fusedfw_full_shared', 'fusedfw_lin', 'bdh_gla', 'bdh_gla2', 'bdh_gla3', 'bdh', 'tf'],
                     help='学生架构：fusedfw / fusedfw_rec / fusedfw_la / fusedfw_full(BDH完整) / bdh / tf')
     ap.add_argument('--teacher', type=str, default='Qwen/Qwen3-0.6B')
     ap.add_argument('--data', type=str, required=True, help='语料文本文件 (每行一行)')
@@ -136,6 +148,8 @@ def main():
     # TF 学生参数
     ap.add_argument('--nh', type=int, default=4, help='TF 注意力头数')
     ap.add_argument('--mlp-mult', type=int, default=128, dest='mlp_mult', help='BDH 稀疏维乘数 N=mlp_mult*D//nh')
+    ap.add_argument('--dla-k', type=int, default=16, help='DLA状态槽容量K(设小如4可触发合并)')
+    ap.add_argument('--dla-w', type=int, default=0, help='DLA块宽W(0则=block; 设小如64可在序列内多块触发合并)')
     ap.add_argument('--dk', type=int, default=32, help='GLA 线性注意力 head 状态宽 dk')
     ap.add_argument('--softmax', action='store_true', help='FusedFWFull 注意力加 softmax（默认 raw，消融用）')
     ap.add_argument('--tie', action='store_true', help='tie embeddings（lm_head 复用 embed，省 vocab*D 参数）')

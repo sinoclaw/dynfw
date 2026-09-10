@@ -150,13 +150,17 @@ class DLAFastAttn(nn.Module):
                 n[:, :, used] = torch.full((B, nh, 1), float(w), device=Q.device)
                 used += 1
             else:
-                # 满 → 严格 DLA: 先合并相邻最低密度对(降到K-1), 再追加本块(回到K)
+                # 满 → 严格 DLA: 先合并相邻最低密度对(降到K-1), 再【追加】本块(回到K)
+                #   ⚠️ 存量 bug 修复(2026-09-10, 由 v8 探针 P3 抓出): 原写法
+                #   `S_m[:, :, -1] = slot_S` 是【覆盖】合并后的末槽 → 净效果槽数
+                #   每合并一次减 1 (K→K-1→K-2→...), 而 used 硬写回 K →
+                #   `S[:, :, :used]` 被 python 切片静默 clamp, 记忆容量随上下文单调萎缩。
+                #   DLA 原文明确要求 fixed-size chronologically ordered cache → 必须
+                #   cat 追加, 不能覆盖。(历史读数 v7=101.22 由带 bug 版本产生, 需重测)
                 S_m, I_m, n_m = self.cache.merge_lowest_density(S, I, n)
-                # 追加本块作为最后一个槽
-                S_m[:, :, -1] = slot_S
-                I_m[:, :, -1] = info
-                n_m[:, :, -1] = torch.full((B, nh, 1), float(w), device=Q.device)
-                S, I, n = S_m, I_m, n_m
+                S = torch.cat([S_m, slot_S.unsqueeze(2)], dim=2)
+                I = torch.cat([I_m, info.unsqueeze(2)], dim=2)
+                n = torch.cat([n_m, torch.full((B, nh, 1, 1), float(w), device=Q.device)], dim=2)
                 used = K
         out = torch.cat(out_chunks, dim=2)
         return out, (S, I, n, used)

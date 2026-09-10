@@ -62,6 +62,12 @@ def make_student(args, teacher_vocab, device):
                               n_layer=args.n_layer, steps=args.cycle_steps,
                               mlp_mult=args.mlp_mult, W=args.block)
 
+    elif args.arch == 'fusedfw_rawfw_cycle':
+        from dynfw.models.fused_fw_rawfw_cycle import BDHBlockRawFWCycleLM
+        m = BDHBlockRawFWCycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
+                                 n_layer=args.n_layer, steps=args.cycle_steps,
+                                 mlp_mult=args.mlp_mult, W=args.block)
+
     elif args.arch == 'fusedfw_gdn_cycle':
         from dynfw.models.fused_fw_gdn_cycle import BDHBlockGDNCycleLM
         m = BDHBlockGDNCycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
@@ -73,6 +79,17 @@ def make_student(args, teacher_vocab, device):
         m = BDHBlockDLACycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
                                n_layer=args.n_layer, steps=args.cycle_steps,
                                mlp_mult=args.mlp_mult, W=(args.dla_w if getattr(args,'dla_w',0)>0 else args.block), K=getattr(args,'dla_k',16))
+
+    elif args.arch == 'fusedfw_slot_topk':
+        # v8: DLA 状态槽 + MoBA 式【槽选择】(读侧从无差别 sum 改为选择性聚合)
+        #     参照 MoBA arXiv:2502.13189 / NSA 2502.11089 / DLA 2606.10650
+        from dynfw.models.fused_fw_dla_topk_cycle import BDHBlockSlotCycleLM
+        m = BDHBlockSlotCycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
+                                n_layer=args.n_layer, steps=args.cycle_steps,
+                                mlp_mult=args.mlp_mult,
+                                W=(args.dla_w if getattr(args,'dla_w',0)>0 else args.block),
+                                K=getattr(args,'dla_k',16),
+                                read_mode=args.read_mode, topk=args.slot_topk)
 
 
     elif args.arch == 'fusedfw_full':
@@ -99,6 +116,12 @@ def make_student(args, teacher_vocab, device):
     elif args.arch == 'bdh':
         m = BDHQwen(D=args.dim, n_layer=args.n_layer, nh=args.nh,
                     mlp_mult=args.mlp_mult, vocab=teacher_vocab, dropout=0.0)
+
+    elif args.arch == 'bdh_rawfw_qwen':
+        from dynfw.models.bdh_rawfw_qwen import BDHRawFWQwen
+        m = BDHRawFWQwen(D=args.dim, n_layer=args.n_layer, nh=args.nh,
+                         mlp_mult=args.mlp_mult, vocab=teacher_vocab, dropout=0.0,
+                         W=(args.dla_w if getattr(args,'dla_w',0)>0 else args.block))
     elif args.arch == 'tf':
         m = TF_sdpa(D=args.dim, nh=args.nh, n_layer=args.n_layer,
                     vocab=teacher_vocab, maxT=args.block)
@@ -125,7 +148,7 @@ def main():
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     ap = argparse.ArgumentParser()
-    ap.add_argument('--arch', type=str, default='fusedfw', choices=['fusedfw', 'fusedfw_cycle', 'fusedfw_rec', 'fusedfw_la', 'fusedfw_la_cycle', 'fusedfw_fw_cycle', 'fusedfw_gdn_cycle', 'fusedfw_dla_cycle', 'fusedfw_full', 'fusedfw_full_shared', 'fusedfw_lin', 'bdh_gla', 'bdh_gla2', 'bdh_gla3', 'bdh', 'tf'],
+    ap.add_argument('--arch', type=str, default='fusedfw', choices=['fusedfw', 'fusedfw_cycle', 'fusedfw_rec', 'fusedfw_la', 'fusedfw_la_cycle', 'fusedfw_fw_cycle', 'fusedfw_rawfw_cycle', 'fusedfw_gdn_cycle', 'fusedfw_dla_cycle', 'fusedfw_slot_topk', 'fusedfw_full', 'fusedfw_full_shared', 'fusedfw_lin', 'bdh_gla', 'bdh_gla2', 'bdh_gla3', 'bdh', 'bdh_rawfw_qwen', 'tf'],
                     help='学生架构：fusedfw / fusedfw_rec / fusedfw_la / fusedfw_full(BDH完整) / bdh / tf')
     ap.add_argument('--teacher', type=str, default='Qwen/Qwen3-0.6B')
     ap.add_argument('--data', type=str, required=True, help='语料文本文件 (每行一行)')
@@ -150,6 +173,11 @@ def main():
     ap.add_argument('--mlp-mult', type=int, default=128, dest='mlp_mult', help='BDH 稀疏维乘数 N=mlp_mult*D//nh')
     ap.add_argument('--dla-k', type=int, default=16, help='DLA状态槽容量K(设小如4可触发合并)')
     ap.add_argument('--dla-w', type=int, default=0, help='DLA块宽W(0则=block; 设小如64可在序列内多块触发合并)')
+    ap.add_argument('--read-mode', type=str, default='softmaxK',
+                    choices=['sum', 'softmax', 'softmaxK', 'topk'],
+                    help='v8 fusedfw_slot_topk 读侧聚合: sum(原版v7无差别求和)/softmax(尺度稳定)/softmaxK(尺度对齐)/topk(稀疏)')
+    ap.add_argument('--slot-topk', type=int, default=2, dest='slot_topk',
+                    help='v8 read_mode=topk 时选择的槽数 k')
     ap.add_argument('--dk', type=int, default=32, help='GLA 线性注意力 head 状态宽 dk')
     ap.add_argument('--softmax', action='store_true', help='FusedFWFull 注意力加 softmax（默认 raw，消融用）')
     ap.add_argument('--tie', action='store_true', help='tie embeddings（lm_head 复用 embed，省 vocab*D 参数）')
@@ -247,6 +275,9 @@ def main():
         'student_params': n_params, 'vocab': teacher_vocab,
         'dim': args.dim, 'slots': args.slots, 'k': args.k, 'n_layer': args.n_layer,
         'nh': args.nh, 'epochs': args.epochs, 'seed': args.seed,
+        'dla_k': getattr(args, 'dla_k', None), 'dla_w': getattr(args, 'dla_w', None), 'block': args.block,
+        'read_mode': getattr(args, 'read_mode', None), 'slot_topk': getattr(args, 'slot_topk', None),
+        'cycle_steps': args.cycle_steps, 'mlp_mult': args.mlp_mult,
         'final_loss': final_loss, 'mean_loss': mean_loss,
         'ppl_est': ppl, 'wall_sec': wall, 'blocks': batch_x.size(0),
     }

@@ -183,8 +183,13 @@ class DLASlotAttn(nn.Module):
 
             # ---- 跨槽检索(★唯一改动: MoBA 式选择, 替代 v7 的无差别 sum) ----
             if used > 0:
-                S_u = S[:, :, :used].float()       # [B,nh,u,N,D]
-                Ks_u = Ksum[:, :, :used].float()   # [B,nh,u,N]
+                # ⚠️ .clone() 必须: S[:,:,:used] 只是【视图】, 而本块末尾会原地写
+                #   `S[:, :, used] = slot_S` → 若不 clone, autograd 报
+                #   "variable needed for gradient computation has been modified by an
+                #    inplace operation" (实测 nh=16 后端炸)。v7 原版因用 .sum() 产生新张量
+                #   侥幸规避; 选择性读直接对 S_u 做 einsum, 必须显式物化。
+                S_u = S[:, :, :used].float().clone()       # [B,nh,u,N,D]
+                Ks_u = Ksum[:, :, :used].float().clone()   # [B,nh,u,N]
                 qf = q_c.float()                   # [B,nh,w,N]
                 if self.read_mode == "sum":
                     # 原版 v7 语义: 先 sum 槽再检索 (保留以做严格对照)
@@ -226,12 +231,17 @@ class DLASlotAttn(nn.Module):
                 Ksum[:, :, used] = slot_K
                 used += 1
             else:
+                # 满 → 严格 DLA: 先合并相邻最低密度对(K→K-1), 再【追加】本块(回到 K)
+                #   ⚠️ 存量 bug(2026-09-10 探针 P3 抓出): 原写法 `S_m[:,:,-1]=slot_S` 是
+                #   【覆盖】合并后的末槽 → 净效果槽数每合并一次减 1 (K→K-1→K-2→...),
+                #   而 used 却硬写回 K → S[:,:,:used] 被 python 切片静默 clamp,
+                #   记忆容量随上下文单调萎缩。DLA 原文要求 fixed-size chronologically
+                #   ordered cache → 必须 cat 追加, 不能覆盖。
                 S_m, I_m, n_m, K_m = self.cache.merge_lowest_density(S, I, n, Ksum)
-                S_m[:, :, -1] = slot_S
-                I_m[:, :, -1] = info
-                n_m[:, :, -1] = torch.full((B, nh, 1), float(w), device=Q.device)
-                K_m[:, :, -1] = slot_K
-                S, I, n, Ksum = S_m, I_m, n_m, K_m
+                S = torch.cat([S_m, slot_S.unsqueeze(2)], dim=2)
+                I = torch.cat([I_m, info.unsqueeze(2)], dim=2)
+                n = torch.cat([n_m, torch.full((B, nh, 1, 1), float(w), device=Q.device)], dim=2)
+                Ksum = torch.cat([K_m, slot_K.unsqueeze(2)], dim=2)
                 used = Kcap
         out = torch.cat(out_chunks, dim=2)
         return out, (S, I, n, Ksum, used)

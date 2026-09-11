@@ -106,6 +106,22 @@ class FusedFWFull(nn.Module):
     def forward_logits(self, x):
         return self.forward(x, None)[0]
 
+    def forward_hidden(self, x):
+        """蒸馏用：返回 head 投影之前的 hidden (B,T,D)（分块 KL 入口）。"""
+        B, T = x.size(); D = self.D; nh = self.nh
+        h = self.e(x).unsqueeze(1)          # [B,1,T,D]
+        h = self.ln(h)
+        for i in range(self.n_layer):
+            h = bdh_full_layer(self, h, self.encoders[i], self.decoders[i],
+                               self.encoder_vs[i], self.attns[i])
+            if self.use_ffn:
+                h = h + self.ffn(self.ln(h))
+        return h.view(B, T, D)
+
+    def head_params(self):
+        """(weight(V,D), None)，与 forward 中 @ self.head.weight.t() 严格一致。"""
+        return self.head.weight, None
+
     def np(self):
         return sum(p.numel() for p in self.parameters())
 

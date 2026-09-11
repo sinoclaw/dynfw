@@ -129,6 +129,31 @@ class BDHQwen(nn.Module):
             loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
         return logits, loss
 
+    def forward_hidden(self, idx):
+        """蒸馏用：返回 head 投影之前的 hidden (B,T,D)，配合分块 KL 避免物化 B×T×V logits。"""
+        C = self.config
+        B, T = idx.size()
+        D = C.n_embd; nh = C.n_head
+        N = D * C.mlp_internal_dim_multiplier // nh
+        x = self.embed(idx).unsqueeze(1)      # B,1,T,D
+        x = self.ln(x)
+        for _ in range(C.n_layer):
+            x_latent = x @ self.encoder        # B,nh,T,N
+            x_sparse = F.relu(x_latent)
+            yKV = self.attn(Q=x_sparse, K=x_sparse, V=x)
+            yKV = self.ln(yKV)
+            y_latent = yKV @ self.encoder_v
+            y_sparse = F.relu(y_latent)
+            xy_sparse = x_sparse * y_sparse
+            xy_sparse = self.drop(xy_sparse)
+            yMLP = xy_sparse.transpose(1, 2).reshape(B, 1, T, N * nh) @ self.decoder
+            y = self.ln(yMLP)
+            x = self.ln(x + y)
+        return x.view(B, T, D)
+
+    def head_params(self):
+        """返回 (weight(V,D), bias(V,) 或 None)，与 forward 中 head 投影严格一致。"""
+        return self.lm_head.t(), None          # Parameter(D,V) -> (V,D) 视图，梯度回传统一 Parameter
     def forward_logits(self, x):
         return self.forward(x, None)[0]
 

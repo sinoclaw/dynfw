@@ -76,6 +76,17 @@ class BDHGLAv3(nn.Module):
             h = h + ffn(h)
         return h
 
+    def forward_hidden(self, x):
+        """蒸馏用：返回 head 投影之前的 hidden (B,T,D)，配合分块 KL 避免物化 B×T×V logits。"""
+        B, T = x.size(); h = self.e(x)
+        for i in range(self.n_layer):
+            h = self.gla_bdh_layer(h, self.encs[i], self.enc_vs[i], self.decs[i],
+                                   self.gla_gate[i], self.ffns[i] if self.use_ffn else None)
+        return self.ln(h)
+
+    def head_params(self):
+        """返回 (weight(V,D), bias(V,) 或 None)，与 forward 中 head 投影严格一致。"""
+        return self.head.weight, None
     def forward_logits(self, x):
         return self.forward(x, None)[0]
 

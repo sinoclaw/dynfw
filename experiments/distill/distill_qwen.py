@@ -29,11 +29,17 @@ from dynfw.models.fused_fw_la_cycle import BDHBlockCycleLM    # 学生 A''-cyc�
 from dynfw.models.fused_fw_full import FusedFWFull                  # 学生 D（BDH 完整机制分)
 from dynfw.models.fused_fw_full_shared import FusedFWFullShared     # 学生 E（省参：weight-sharing + tie词表，官方BDH机制）
 from dynfw.models.fused_fw_lin import FusedFWLin             # 学生 A''''（线性注意力+内容寻址）
-from dynfw.models.bdh_gla import BDHGLA                     # 学生 M（BDH稀疏 + GLA线性核 = BDH+Mamba式）
-from dynfw.models.bdh_gla_v2 import BDHGLAv2                # 学生 M2（v2：完整保留BDH表达力 + GLA线性）
-from dynfw.models.bdh_gla_v3 import BDHGLAv3                # 学生 M3（v3：x_sparse作Q=K=V过GLA，最忠实BDH K-is-Q）
+try:                                                         # GLA 线依赖 fla；缺 fla 时其余架构照常可用
+    from dynfw.models.bdh_gla import BDHGLA                 # 学生 M（BDH稀疏 + GLA线性核 = BDH+Mamba式）
+    from dynfw.models.bdh_gla_v2 import BDHGLAv2            # 学生 M2（v2：完整保留BDH表达力 + GLA线性）
+    from dynfw.models.bdh_gla_v3 import BDHGLAv3            # 学生 M3（v3：x_sparse作Q=K=V过GLA，最忠实BDH K-is-Q）
+    _GLA_ERR = None
+except ImportError as _e:                                    # ModuleNotFoundError: fla
+    BDHGLA = BDHGLAv2 = BDHGLAv3 = None
+    _GLA_ERR = _e
 from dynfw.models.bdh_qwen import BDHQwen                   # 学生 C（BDH：稀疏+linear attention保顺序）
 from dynfw.models.transformer import TF_sdpa                # 学生 B（对照）
+from dynfw.training.chunked_kl import chunked_kl_loss as chunked_kl_loss  # 分块 KL（大词表显存墙，--chunk>0 启用）
 
 
 def make_student(args, teacher_vocab, device):
@@ -105,12 +111,15 @@ def make_student(args, teacher_vocab, device):
         m = FusedFWLin(D=args.dim, nh=args.nh, dk=32, vocab=teacher_vocab,
                        n_layer=args.n_layer, use_ffn=True)
     elif args.arch == 'bdh_gla':
+        assert BDHGLA is not None, f'bdh_gla 需要 fla（flash-linear-attention）：{_GLA_ERR}'
         m = BDHGLA(D=args.dim, nh=args.nh, dk=32, vocab=teacher_vocab,
                    n_layer=args.n_layer, use_ffn=True)
     elif args.arch == 'bdh_gla2':
+        assert BDHGLAv2 is not None, f'bdh_gla2 需要 fla（flash-linear-attention）：{_GLA_ERR}'
         m = BDHGLAv2(D=args.dim, nh=args.nh, dk=args.dk, N=args.slots, vocab=teacher_vocab,
                      n_layer=args.n_layer, use_ffn=True)
     elif args.arch == 'bdh_gla3':
+        assert BDHGLAv3 is not None, f'bdh_gla3 需要 fla（flash-linear-attention）：{_GLA_ERR}'
         m = BDHGLAv3(D=args.dim, nh=args.nh, N=args.slots, vocab=teacher_vocab,
                      n_layer=args.n_layer, use_ffn=True)
     elif args.arch == 'bdh':
@@ -181,6 +190,12 @@ def main():
     ap.add_argument('--dk', type=int, default=32, help='GLA 线性注意力 head 状态宽 dk')
     ap.add_argument('--softmax', action='store_true', help='FusedFWFull 注意力加 softmax（默认 raw，消融用）')
     ap.add_argument('--tie', action='store_true', help='tie embeddings（lm_head 复用 embed，省 vocab*D 参数）')
+    ap.add_argument('--teacher-half', action='store_true', dest='teacher_half',
+                    help='分块路径下教师 logits 保持 fp16 常驻 GPU（落盘本就是 fp16），省一半教师显存；'
+                         '块内转 fp32 计算，不改变数值口径')
+    ap.add_argument('--chunk', type=int, default=0,
+                    help='沿 T 分块算 KL 的块大小（>0 启用分块路径；每次只物化 chunk×V 的 logits，'
+                         '实测 V=152K/B=8/T=1024 下峰值 33GiB->7GiB）。0=原全量路径')
     ap.add_argument('--seed', type=int, default=0)
     args = ap.parse_args()
 
@@ -248,20 +263,39 @@ def main():
     print(f"=== student({args.arch}) params: {n_params} ===")
 
     losses = []
+    peak_gib = 0.0
+    if device == 'cuda':
+        torch.cuda.reset_peak_memory_stats()
     opt = torch.optim.AdamW(student.parameters(), lr=args.lr)
     student.train()
     batch_x = torch.cat(t_blocks, dim=0)
     for epoch in range(args.epochs):
         for i in range(0, batch_x.size(0), args.batch):
             bx = batch_x[i:i+args.batch].to(device)
-            t_lg = torch.from_numpy(t_arr[i:i+args.batch]).to(device).float()
-            if args.arch in ('tf', 'bdh', 'fusedfw_full', 'fusedfw_full_shared', 'fusedfw_lin', 'bdh_gla', 'bdh_gla2', 'bdh_gla3'):
-                s_lg, _ = student.forward(bx)      # TF/BDH/FusedFWFull/FusedFWLin/BDHGLA/BDHGLAv2/BDHGLAv3 返回 (logits, loss)
+            _t_np = t_arr[i:i + args.batch]
+            if args.chunk > 0 and args.teacher_half:
+                t_lg = torch.from_numpy(_t_np).to(device)            # 保持 fp16 常驻（省一半显存）
             else:
-                s_lg = student.forward_logits(bx)  # FusedFW 返回 logits
-            loss = kl_loss(s_lg.float(), t_lg, args.temperature)
+                t_lg = torch.from_numpy(_t_np).to(device).float()
+            if args.chunk > 0:
+                # 分块路径：学生只产出 hidden(B,T,D)，lm_head 投影+KL 放进自定义 Function 分块做，
+                # 反向按块重算 —— 不物化 B×T×V logits（实测峰值 33GiB -> 7GiB，数值等价 fp64 1e-17）
+                assert hasattr(student, 'forward_hidden') and hasattr(student, 'head_params'), \
+                    f"{args.arch} 未实现 forward_hidden/head_params，无法走分块路径"
+                h = student.forward_hidden(bx)
+                W_h, b_h = student.head_params()
+                loss = chunked_kl_loss(h, W_h, b_h, t_lg, chunk=args.chunk,
+                                       temperature=args.temperature)
+            else:
+                if args.arch in ('tf', 'bdh', 'fusedfw_full', 'fusedfw_full_shared', 'fusedfw_lin', 'bdh_gla', 'bdh_gla2', 'bdh_gla3'):
+                    s_lg, _ = student.forward(bx)      # TF/BDH/FusedFWFull/FusedFWLin/BDHGLA/BDHGLAv2/BDHGLAv3 返回 (logits, loss)
+                else:
+                    s_lg = student.forward_logits(bx)  # FusedFW 返回 logits
+                loss = kl_loss(s_lg.float(), t_lg, args.temperature)
             opt.zero_grad(); loss.backward(); opt.step()
             losses.append(loss.item())
+            if device == 'cuda':
+                peak_gib = max(peak_gib, torch.cuda.max_memory_allocated() / 2 ** 30)
             if len(losses) % 20 == 0:
                 print(f"  epoch {epoch} step {len(losses)} loss {loss.item():.4f}")
     wall = time.time() - t0
@@ -280,6 +314,8 @@ def main():
         'cycle_steps': args.cycle_steps, 'mlp_mult': args.mlp_mult,
         'final_loss': final_loss, 'mean_loss': mean_loss,
         'ppl_est': ppl, 'wall_sec': wall, 'blocks': batch_x.size(0),
+        'chunk': args.chunk, 'peak_gib': round(peak_gib, 2),
+        'teacher_half': bool(args.teacher_half), 'teacher_dtype': str(t_lg.dtype),
     }
     with open(os.path.join(args.out, 'distill_result.json'), 'w') as f:
         json.dump(result, f, indent=2)

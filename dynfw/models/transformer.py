@@ -40,6 +40,23 @@ class TF_sdpa(nn.Module):
         loss = None if t is None else F.cross_entropy(lg.view(-1, self.vocab), t.view(-1))
         return lg, loss
 
+    def forward_hidden(self, x):
+        """蒸馏用：返回 lm_head 之前的 hidden (B,T,D)，配合分块 KL 避免物化 B×T×V logits。"""
+        B, T = x.size(); h = self.nh; D = self.D
+        y = self.e(x) + self.pos[:T].unsqueeze(0)
+        for ln1, qkv, proj, ln2, w1, act, w2 in self.blocks:
+            xx = ln1(y); q, k, v = qkv(xx).chunk(3, dim=-1)
+            q = q.view(B, T, h, D//h).transpose(1, 2); k = k.view(B, T, h, D//h).transpose(1, 2)
+            v = v.view(B, T, h, D//h).transpose(1, 2)
+            o = F.scaled_dot_product_attention(q, k, v, is_causal=True)
+            o = o.transpose(1, 2).contiguous().view(B, T, D); o = proj(o)
+            y = y + o; y = y + w2(act(w1(ln2(y))))
+        return self.ln(y)
+
+    def head_params(self):
+        """(weight(V,D), bias(V,))，与 forward 中 self.h(self.ln(y)) 严格一致。"""
+        return self.h.weight, self.h.bias
+
     def np(self):
         return sum(p.numel() for p in self.parameters())
 

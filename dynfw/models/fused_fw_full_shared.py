@@ -66,6 +66,23 @@ class FusedFWFullShared(nn.Module):
     def forward_logits(self, x):
         return self.forward(x, None)[0]
 
+    def forward_hidden(self, x):
+        """蒸馏用：返回 head 投影之前的 hidden (B,T,D)（分块 KL 入口，兼容 tie 分支）。"""
+        B, T = x.size(); D = self.D
+        h = self.e(x).unsqueeze(1)
+        h = self.ln(h)
+        for _ in range(self.n_layer):
+            h = bdh_full_layer(self, h, self.encoder, self.decoder, self.encoder_v, self.attn)
+            if self.use_ffn:
+                h = h + self.ffn(self.ln(h))
+        return h.view(B, T, D)
+
+    def head_params(self):
+        """tie 时 head 权重即 embed.weight(V,D)；否则 lm_head(V,D) 转置视图。"""
+        if self.tie:
+            return self.e.weight, None
+        return self.lm_head.t(), None
+
     def np(self):
         return sum(p.numel() for p in self.parameters())
 

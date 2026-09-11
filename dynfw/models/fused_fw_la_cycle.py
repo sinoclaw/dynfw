@@ -139,6 +139,18 @@ class BDHBlockCycleLM(nn.Module):
         loss = None if t is None else F.cross_entropy(logits.view(-1, self.vocab), t.view(-1))
         return logits, loss
 
+    def forward_hidden(self, x):
+        """蒸馏用：返回 head 投影之前的 hidden (B,T,D)，配合分块 KL 避免物化 B×T×V logits。"""
+        B, T = x.size()
+        h = self.e(x).unsqueeze(1)           # [B,1,T,D]
+        for block in self.blocks:
+            for _ in range(self.steps):
+                h = block(h)                 # 循环潜推理: 潜状态喂回迭代
+        return h.view(B, T, self.D)
+
+    def head_params(self):
+        """返回 (weight(V,D), bias(V,) 或 None)，与 forward 中 head 投影严格一致。"""
+        return self.head.weight, None
     def forward_logits(self, x):
         return self.forward(x, None)[0]
 

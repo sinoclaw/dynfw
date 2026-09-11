@@ -38,6 +38,18 @@ class FusedFWQwen(nn.Module):
         loss = None if t is None else F.cross_entropy(lg.view(-1, self.vocab), t.view(-1))
         return lg, loss
 
+    def forward_hidden(self, x):
+        """蒸馏用：返回 head 投影之前的 hidden (B,T,D)，配合分块 KL 避免物化 B×T×V logits。"""
+        B, T = x.size(); h = self.e(x)
+        for i in range(self.n_layer):
+            h, _, _ = sparse_rho_forward(self, h, self.encs[i], self.decs[i], self.out)
+            if self.use_ffn:
+                h = h + self.ffn(self.ln(h))
+        return self.ln(h)
+
+    def head_params(self):
+        """返回 (weight(V,D), bias(V,) 或 None)，与 forward 中 head 投影严格一致。"""
+        return self.head.weight, None
     def forward_logits(self, x):
         """只返回 logits（蒸馏用，教师/学生都走这个接口）。"""
         return self.forward(x, None)[0]

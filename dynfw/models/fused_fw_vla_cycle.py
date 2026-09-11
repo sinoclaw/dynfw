@@ -178,6 +178,22 @@ class BDHBlockVLACycleLM(nn.Module):
             loss = F.cross_entropy(lg.view(-1, self.vocab), targets.view(-1))
         return lg, loss
 
+    def forward_hidden(self, x):
+        """蒸馏用：返回 head 投影之前的 hidden (B,T,D)，配合分块 KL 避免物化 B×T×V logits。"""
+        B, T = x.size()
+        h = self.e(x).unsqueeze(1)
+        h = self.ln(h)
+        # 修复 2026-09-11：原 `mem = None; for blk: h, mem = blk(h, mem)` 造成未来泄漏 ——
+        # FWAttention 返回的 new_mem 是【整个序列】的 k⊗v 累积，下一 block 在位置 t 检索时
+        # 读到 t 之后的 k⊗v。逐层 hook 实测 block0 因果 OK、block1 起发散(2.3e-2→14.3)。
+        # 改为每 block 独立 memory（层内 chunk 间仍累积，因果正确）。探针验证 maxdiff=0。
+        for blk in self.blocks:
+            h, _ = blk(h, None)
+        return h.view(B, T, self.D)
+
+    def head_params(self):
+        """返回 (weight(V,D), bias(V,) 或 None)，与 forward 中 head 投影严格一致。"""
+        return self.head.weight, None
     def forward_logits(self, x):
         return self.forward(x, None)[0]
 

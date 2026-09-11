@@ -172,9 +172,12 @@ class BDHBlockGDNCycleLM(nn.Module):
         B, T = x.size()
         h = self.e(x).unsqueeze(1)
         h = self.ln(h)
-        mem = None
+        # 修复 2026-09-11：原 `mem = None; for blk: h, mem = blk(h, mem)` 造成未来泄漏 ——
+        # FWAttention 返回的 new_mem 是【整个序列】的 k⊗v 累积，下一 block 在位置 t 检索时
+        # 读到 t 之后的 k⊗v。逐层 hook 实测 block0 因果 OK、block1 起发散(2.3e-2→14.3)。
+        # 改为每 block 独立 memory（层内 chunk 间仍累积，因果正确）。探针验证 maxdiff=0。
         for blk in self.blocks:
-            h, mem = blk(h, mem)
+            h, _ = blk(h, None)
         lg = self.head(h.view(B, T, self.D))
         loss = None
         if targets is not None:

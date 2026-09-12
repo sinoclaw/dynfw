@@ -432,3 +432,82 @@ def to_opt7(model, strict_bf16=True, bf16_prefix=False):
         blk.attn.strict_bf16 = strict_bf16
         blk.attn.bf16_prefix = bf16_prefix
     return model
+
+
+# ---------------------------------------------------------------------------
+# OPT5-RAW：OPT5 骨架（手写 bmm + 并行 exclusive 前缀和）+ **块内 raw 读侧**。
+#
+# 背景（2026-09-12）：v6 基线把块内读侧从 softmax 改为 raw（能力 +8.5 分，8 seed 统计确认），
+#   但 OPT1/2/6/7 优化的是 **softmax 语义**（SDPA / FlashAttention 内核内部强制 softmax），
+#   OPT5 也是手写 softmax → **现有全部优化都无法表达 raw**。raw 与 SDPA 互斥。
+# 因此 raw 的最优形态只能：手写 bmm（材料化 [W,W] 分数矩阵）+ 前缀和，但省掉 softmax 的
+#   exp + 归约（raw 只做 masked_fill(0) + bmm）→ 理论上比 OPT5 的 softmax 版更快。
+#
+# raw 语义（严格对齐 fused_fw_fw_cycle.FWAttention read_mode='raw'）：
+#   sim = q·kᵀ ; mask = tril(diag=-1) → 置 **0**（不是 -inf）；**不做 softmax**；out = sim·v
+# ---------------------------------------------------------------------------
+class FWAttentionOpt5Raw(FWAttention):
+    """OPT5 骨架 + raw 块内读侧。参数与基线完全一致（只换实现形态）。"""
+
+    strict_bf16 = True
+    # True: 前缀和也在 bf16（省带宽）; False: 前缀和留 fp32（贴近基线顺序累加）
+    bf16_prefix = False
+    # 缓存的 tril(diag=-1) 掩码（W 固定 → 只建一次，省掉每块 fill_）
+    _mask_cache = None
+
+    @classmethod
+    def _tril_mask(cls, W, device):
+        c = cls._mask_cache
+        if c is None or c[0] != W or c[1] != str(device):
+            m = torch.tril(torch.ones(W, W, device=device, dtype=torch.bool), diagonal=-1)
+            c = (W, str(device), m)
+            cls._mask_cache = c
+        return c[2]
+
+    def forward(self, Q, K, V, memories=None, W=512):
+        assert K is Q
+        B, nh, T, N = Q.size()
+        D = self.D
+        if W <= 0 or T % W != 0:
+            return super().forward(Q, K, V, memories, W)
+        nch = T // W
+        bf_ = B * nh * nch
+
+        r = torch.arange(0, T, device=self.freqs.device, dtype=torch.float32).view(1, 1, -1, 1)
+        QR = FWAttentionOpt.rope_fast(r * self.freqs, Q)
+
+        qq = QR.reshape(bf_, W, N)
+        vv = V.view(B, 1, nch, W, D).expand(B, nh, nch, W, D).reshape(bf_, W, D)
+
+        # ① 块内 raw 因果注意（手写 bf16 bmm；无 softmax，mask=0 真 0，diagonal=-1 不看自己）
+        sc = torch.bmm(qq, qq.transpose(1, 2))                       # [bf_, W, W]
+        mask = self._tril_mask(W, Q.device)
+        sc = sc.masked_fill(~mask, 0.0)
+        a = torch.bmm(sc, vv)                                        # [bf_, W, D]
+
+        # ② 每块的 Σ_w k⊗v = qᵀ v
+        kv = torch.bmm(qq.transpose(1, 2), vv).view(B, nh, nch, N, D)
+
+        # ③ exclusive 前缀和（与 OPT5 同：S - kv 即 exclusive）
+        dt_sum = kv.dtype if self.bf16_prefix else torch.float32
+        S = kv.cumsum(dim=2, dtype=dt_sum) - kv
+        if memories is not None:
+            S = S + memories.unsqueeze(2)
+
+        # ④ 跨块检索（显式 bmm）
+        o = torch.bmm(qq, S.reshape(bf_, N, D))
+        out = (a + o).reshape(B, nh, T, D)
+
+        new_mem = kv.sum(dim=2, dtype=torch.float32)
+        if memories is not None:
+            new_mem = new_mem + memories.float()
+        return out, new_mem
+
+
+def to_opt5_raw(model, strict_bf16=True, bf16_prefix=False):
+    """OPT5 骨架 + raw 块内读侧（与 v6 新默认 read_mode='raw' 语义对齐）。"""
+    for blk in model.blocks:
+        blk.attn.__class__ = FWAttentionOpt5Raw
+        blk.attn.strict_bf16 = strict_bf16
+        blk.attn.bf16_prefix = bf16_prefix
+    return model

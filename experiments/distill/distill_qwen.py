@@ -42,6 +42,15 @@ from dynfw.models.transformer import TF_sdpa                # 学生 B（对照�
 from dynfw.training.chunked_kl import chunked_kl_loss as chunked_kl_loss  # 分块 KL（大词表显存墙，--chunk>0 启用）
 
 
+def _w(args):
+    """块宽 W 统一解析：--w 优先，其次历史参数 --dla-w，否则用 block。"""
+    if getattr(args, 'w', 0) > 0:
+        return args.w
+    if getattr(args, 'dla_w', 0) > 0:
+        return args.dla_w
+    return args.block
+
+
 def make_student(args, teacher_vocab, device):
     """按 --arch 构造学生，返回 (model, n_params)。"""
     if args.arch == 'fusedfw':
@@ -66,7 +75,7 @@ def make_student(args, teacher_vocab, device):
         from dynfw.models.fused_fw_fw_cycle import BDHBlockFWCycleLM
         m = BDHBlockFWCycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
                               n_layer=args.n_layer, steps=args.cycle_steps,
-                              mlp_mult=args.mlp_mult, W=args.block)
+                              mlp_mult=args.mlp_mult, W=_w(args))
 
     elif args.arch == 'fusedfw_vla_cycle':
         from dynfw.models.fused_fw_vla_cycle import BDHBlockVLACycleLM
@@ -78,19 +87,19 @@ def make_student(args, teacher_vocab, device):
         from dynfw.models.fused_fw_rawfw_cycle import BDHBlockRawFWCycleLM
         m = BDHBlockRawFWCycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
                                  n_layer=args.n_layer, steps=args.cycle_steps,
-                                 mlp_mult=args.mlp_mult, W=args.block)
+                                 mlp_mult=args.mlp_mult, W=_w(args))
 
     elif args.arch == 'fusedfw_gdn_cycle':
         from dynfw.models.fused_fw_gdn_cycle import BDHBlockGDNCycleLM
         m = BDHBlockGDNCycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
                               n_layer=args.n_layer, steps=args.cycle_steps,
-                              mlp_mult=args.mlp_mult, W=args.block)
+                              mlp_mult=args.mlp_mult, W=_w(args))
 
     elif args.arch == 'fusedfw_dla_cycle':
         from dynfw.models.fused_fw_dla_cycle import BDHBlockDLACycleLM
         m = BDHBlockDLACycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
                                n_layer=args.n_layer, steps=args.cycle_steps,
-                               mlp_mult=args.mlp_mult, W=(args.dla_w if getattr(args,'dla_w',0)>0 else args.block), K=getattr(args,'dla_k',16))
+                               mlp_mult=args.mlp_mult, W=_w(args), K=getattr(args,'dla_k',16))
 
     elif args.arch == 'fusedfw_slot_topk':
         # v8: DLA 状态槽 + MoBA 式【槽选择】(读侧从无差别 sum 改为选择性聚合)
@@ -99,7 +108,7 @@ def make_student(args, teacher_vocab, device):
         m = BDHBlockSlotCycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
                                 n_layer=args.n_layer, steps=args.cycle_steps,
                                 mlp_mult=args.mlp_mult,
-                                W=(args.dla_w if getattr(args,'dla_w',0)>0 else args.block),
+                                W=_w(args),
                                 K=getattr(args,'dla_k',16),
                                 read_mode=args.read_mode, topk=args.slot_topk)
 
@@ -136,7 +145,7 @@ def make_student(args, teacher_vocab, device):
         from dynfw.models.bdh_rawfw_qwen import BDHRawFWQwen
         m = BDHRawFWQwen(D=args.dim, n_layer=args.n_layer, nh=args.nh,
                          mlp_mult=args.mlp_mult, vocab=teacher_vocab, dropout=0.0,
-                         W=(args.dla_w if getattr(args,'dla_w',0)>0 else args.block))
+                         W=_w(args))
     elif args.arch == 'tf':
         m = TF_sdpa(D=args.dim, nh=args.nh, n_layer=args.n_layer,
                     vocab=teacher_vocab, maxT=args.block)
@@ -187,6 +196,9 @@ def main():
     ap.add_argument('--nh', type=int, default=4, help='TF 注意力头数')
     ap.add_argument('--mlp-mult', type=int, default=128, dest='mlp_mult', help='BDH 稀疏维乘数 N=mlp_mult*D//nh')
     ap.add_argument('--dla-k', type=int, default=16, help='DLA状态槽容量K(设小如4可触发合并)')
+    ap.add_argument('--w', type=int, default=0, dest='w',
+                    help='块内窗口宽 W（0=用 block）。设小(如64)可让层内出现多个 chunk，'
+                         '使跨 chunk 记忆在层内累积 —— 泄漏修复后各架构必须用同一 W 才可公平对比')
     ap.add_argument('--dla-w', type=int, default=0, help='DLA块宽W(0则=block; 设小如64可在序列内多块触发合并)')
     ap.add_argument('--read-mode', type=str, default='softmaxK',
                     choices=['sum', 'softmax', 'softmaxK', 'topk'],
@@ -332,4 +344,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 

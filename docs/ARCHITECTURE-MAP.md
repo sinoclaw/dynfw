@@ -1,20 +1,36 @@
 # DynFW 架构台账（ARCHITECTURE-MAP）
 
 > **唯一权威表**：版本号 ↔ 文件 ↔ 机制 ↔ 状态 ↔ 结论指针。
-> 建立：2026-09-12（安安）。**目的：不再靠 docstring / commit 考古；任何结论先落本表再对外说。**
+> 建立 2026-09-12（安安）。**任何结论先落本表再对外说，不靠 docstring / commit 考古。**
+> 最近更新：**2026-09-12 17:40 —— 泄漏事件 + 全量重测**。
 
 ---
 
-## 0. 先钉死最常被混淆的两件事：主线 ≠ 最优
+## ⚠️ 当前口径声明（最重要，先读这条）
 
-| 问题 | 答案 | 文件 | 证据 |
+**2026-09-12 发现两处因果性缺陷，本表此前引用的全部实验读数整体作废：**
+
+| 缺陷 | 内容 | 影响 |
+|---|---|---|
+| **D1 · 跨 block memory 泄漏** | FWAttention 返回整段序列的 k⊗v 累积并传给下一 block → 位置 t 检索时读到 t 之后的累积 = 偷看未来 | 6 个架构：v6/v6.5 vla/v6.6 gdn/v7 dla/v8 dla_topk/rawfw；**历史 n_layer≥2 读数全部作废** |
+| **D2 · softmax 路径泄漏** | `fused_fw_full` 的 `scores.tril(-1)` 后接 `F.softmax` → 上三角被置 0 后被 softmax 变成 exp(0)=1 的非零权重 | 仅 `use_softmax=True` 消融变体；raw 路径不受影响（已回归验证逐位一致） |
+
+- 两处均已修复（D1: `d44e189`；D2: `eca1110`），探针实测 **10/10 + 4/4 全部 `CAUSAL OK`（maxdiff = 0）**。
+- **旧结论文档已全部删除**（`results/CLASH_*.md` ×8、`experiments/distill/V6_BREAKTHROUGH.md`、`CLASH_RESULT.md`），旧运行产物目录亦已清理。
+- **唯一有效口径 = §4 重测矩阵**（泄漏修复后、同尺子、3 seed）。任何对外引用必须来自 §4。
+
+---
+
+## 0. 主线 ≠ 最优（结构判定仍成立；成绩读数以 §4 为准）
+
+| 问题 | 答案 | 文件 | 状态 |
 |---|---|---|---|
-| **主线**（实际在训练/推进的） | **v6** `BDHBlockFWCycleLM` | `dynfw/models/fused_fw_fw_cycle.py` | `train_talk.py --arch v6/v6w`；`benchmarks/seg_attr_2b.py` 的 `CFG2B=dict(D=2048,nh=16,n_layer=42,mlp_mult=4,vocab=130560,W=256)`；`PLAN-DISTILL-THEN-TRAIN.md` Step1 |
-| **最优**（蒸馏口径成绩最好） | **FusedFWFull 每层独立** 385M → KL **93.23** | `dynfw/models/fused_fw_full.py` | `results/CLASH_FULLPARAM_SHOWDOWN.md` |
-| **省参最优** | **FusedFWFull weight-sharing**（4 层，**不 tie**）272M → KL **115.24** | `dynfw/models/fused_fw_full_shared.py` | `results/CLASH_WS_DEPTH_SCAN.md` |
-| **最优实现形态** | `to_opt5` 融合实现（**数学等价**，+2.19× 吞吐） | `dynfw/models/fused_fw_fw_cycle_opt.py` | 本表 §4 |
+| **主线**（实际推进的） | **v6** `BDHBlockFWCycleLM` | `dynfw/models/fused_fw_fw_cycle.py` | ⚠️ 「能力」依据随 D1 作废，待 §4 复测 |
+| **蒸馏最优** | FusedFWFull 每层独立 385M | `dynfw/models/fused_fw_full.py` | 因果 ✅（D2 已修）；旧 KL 93.23 作废待重跑 |
+| **省参最优** | FusedFWFullShared（4 层不 tie）272M | `dynfw/models/fused_fw_full_shared.py` | 因果 ✅；旧 KL 115.24 作废待重跑 |
+| **最优实现形态** | `to_opt5` 融合实现（数学等价，+2.19× 吞吐） | `dynfw/models/fused_fw_fw_cycle_opt.py` | ✅ 有效（属速度账，与泄漏无关） |
 
-> ⚠️ **v6 是「O(T) 压缩状态」路线的载体，不是能力最优版本。** 把二者混讲是历史表述错误。
+> 主线判定依据：`train_talk.py --arch v6/v6w`；`benchmarks/seg_attr_2b.py` 的 `CFG2B`；`PLAN-DISTILL-THEN-TRAIN.md` Step1。
 
 ---
 
@@ -22,7 +38,7 @@
 
 | 归属 | 架构 | 文件 |
 |---|---|---|
-| **我方** | FusedFW / DynFW 系 | `fused_fw*.py`（18 个） |
+| **我方** | FusedFW / DynFW 系 | `fused_fw*.py` |
 | 外部参照（标尺） | 标准 SDPA Transformer | `transformer.py` |
 | 外部参照（对手） | 官方 BDH（pathwaycom/bdh） | `bdh_qwen.py` `bdh_rawfw_qwen.py` |
 | 外部教师 | Qwen3-0.6B（HF，不入库） | — |
@@ -32,8 +48,8 @@
 
 | 机制 | 文件 | 复杂度 |
 |---|---|---|
-| 全序列 softmax 注意 | `transformer.py` | O(T²) |
-| raw 分块注意 + 跨块 fast-weight | `bdh_qwen` `fused_fw_fw_cycle`(v6) `vla`(v6.5) `gdn`(v6.6) `dla`(v7) `dla_topk`(v8) `rawfw_cycle` | 块内 O(T·W)+定长状态 |
+| 全序列 softmax 注意 | `transformer.py`, `fused_fw_full*`（raw/softmax） | O(T²) |
+| raw 分块注意 + 跨块 fast-weight | `bdh_qwen` `fused_fw_fw_cycle`(v6) `vla`(v6.5) `gdn`(v6.6) `dla`(v7) `dla_topk`(v8) `rawfw_cycle` | 块内 O(T·W) + 定长状态 |
 | 线性核 GLA | `bdh_gla` `v2` `v3` | 真 O(T) |
 | 纯 rho 快权重（无注意） | `fused_fw`(v0.0.1) `fused_fw_qwen` `lin` `rec` | O(T) 定长状态 |
 
@@ -50,55 +66,101 @@
 
 ---
 
-## 4. 实验台账（三把尺子，**互不可比**）
+## 4. 实验台账（唯一有效口径 = 泄漏修复后重测矩阵）
 
-### 批 1 · 蒸馏全参（D=768 nh=8 L=4，WikiText-103 前2000行，20ep，seed0，共享 233M 词表税）
-| 架构 | 参数 | final KL |
+**尺子**：批 2 配方 —— D=128 / nh=16 / n_layer=2 / mlp_mult=64 / steps=1，45.2M 学生，Qwen3-0.6B 教师，
+corpus_en，block 256 / batch 4 / max_batches 40 / epochs 20，共享教师 logits，**3 seed（0/1/2）取中位**。
+**脚本**：`experiments/distill/run_retest_leakfix.sh` | **汇总**：`experiments/distill/collect_retest.py`
+**产物**：`results/retest_<arch>_s<seed>/distill_result.json`
+
+### 4.1 重测矩阵结果（2026-09-12，24+15 run 全完成）
+
+**A · W=block(256) 批**（`results/retest_*`，脚本 `run_retest_leakfix.sh`）
+| 架构 | 中位 KL | 逐 seed |
 |---|---|---|
-| **FusedFWFull 每层独立** | 385M | **93.23** ← 最优 |
-| FusedFWFull-WS（4 层） | 272M | **115.24** ← 省参最优 |
-| BDH | 270M | 117.32 |
-| TF | 262M | 133.60 |
-| FusedFWFull-WS（16 层） | 272M | 177.87 ❌ 加深反恶化 |
-| FusedFWFull + tie | 268M | 1298.56 ❌ tie 崩 |
-> 来源：`results/CLASH_{FULLPARAM_SHOWDOWN,WS_DEPTH_SCAN,FUSEDFW_FULL_SHARED}.md`
+| `la_cycle`(v5) | 78.56 | 77.55 / 78.56 / 80.73 |
+| `dla_cycle`(v7) | 93.05 | 99.00 / 87.66 / 93.05 |
+| `bdh` | 93.66 | 93.66 / 88.94 / 97.64 |
+| `tf` | 94.58 | 167.43 / 94.33 / 94.58 |
+| `rawfw_cycle` | 96.45 | 98.45 / 79.64 / 96.45 |
+| `gdn_cycle`(v6.6) | 354.52 | 354.37 / 354.52 / 354.71 |
+| `fw_cycle`(v6) | 354.69 | 354.69 / 354.84 / 354.44 |
+| `slot_topk`(v8) | 354.69 | 354.69 / 354.84 / 354.44 |
 
-### 批 2 · 蒸馏小配置（D=128 nh=16 L=2 mm=64，45.2M，3 seed）
-| 架构 | final KL（中位） | 复杂度斜率 |
-|---|---|---|
-| **v6 `fw_cycle`** | **82.39** | **0.76 → 真 O(T)** |
-| v5 `la_cycle` | 84.57 | 1.50 → O(T²) |
-| bdh_qwen | 88.41 | — |
-| TF | 168.98 | — |
-> 来源：`experiments/distill/V6_BREAKTHROUGH.md`
-
-### 批 3 · 真训 T=8192（D=256 nh=8 L=6，tinystories，2000 步 / 65.5M token，seed0）
-| 臂 | 结构参数 | val_loss | 吞吐 |
+**B · W=64 批（公平口径，`results/w64_*`，脚本 `run_retest_w64.sh`）**
+| 排名 | 架构 | 中位 KL | 逐 seed |
 |---|---|---|---|
-| v6 `mm=4`(N=128) | 4.7M | 3.4624 | 68.5k(orig) → **150k(to_opt5)** |
-| v6 `mm=16`(N=512) | 18.9M | 3.3972 | — |
-| v6 `mm=64`(N=2048) | 75.5M | 3.3697 | — |
-| **TF** | **4.8M** | **2.3791** | 276.3k |
-> 来源：`results/scanN_*`、`results/t8192_*`
+| 1 | `rawfw_cycle` | **84.57** | 81.61 / 84.57 / 87.42 |
+| 2 | `gdn_cycle`(v6.6) | **88.99** | 86.87 / 88.99 / 97.49 |
+| 3 | `fw_cycle`(v6) | 93.05 | 99.00 / 87.66 / 93.05 |
+| 4 | `bdh`（锚） | 93.66 | 88.94 / 93.66 / 97.64 |
+| 5 | `slot_topk`(v8) | 97.47 | 96.86 / 97.47 / 112.23 |
+| — | `la_cycle`(v5，锚) | **78.56** | 77.55 / 78.56 / 80.73 |
 
-**批 3 结论（硬）**：v6 结构参数 ×16（4.7M→75.5M）只换 0.093 nats ⇒ **不是容量账，是压缩状态的机制账**；差距 0.99 nats。
+**C · W=block → W=64 对照（本表最重要的方法论发现）**
+| 架构 | W=block | W=64 | Δ |
+|---|---|---|---|
+| `fw_cycle`(v6) | 354.69 | 93.05 | **-261.6** |
+| `gdn_cycle` | 354.52 | 88.99 | **-265.5** |
+| `slot_topk` | 354.69 | 97.47 | -257.2 |
+| `rawfw_cycle` | 96.45 | 84.57 | -11.9 |
+| `dla_cycle` | 93.05 | 93.05 | 0（一致性 PASS） |
+
+> ⚠️ **铁律新增（第 7 条）**：凡"块内窗口 + 跨块/跨 chunk 记忆"架构，**报分前必须验证 chunk 数 > 1**
+> （chunk 数 = T / W）。W = block 时整层只有 1 个 chunk，**跨块记忆被静默关闭**，架构退化为「仅块内自注意」——
+> 此时读数与架构能力无关（v6 的 354 全由此产生，不是崩塌）。
+
+### 4.2 机制触发核查（2026-09-12 新增，必查项）
+| 架构 | 机制 | 触发判据 | 实测 | 判定 |
+|---|---|---|---|---|
+| `fw_cycle`(v6) | 跨 chunk fast-weight 累积 | chunk 数 > 1 | W=64 → 4 chunks | ✅ 触发 |
+| `gdn_cycle`(v6.6) | 线性核定长状态 | chunk 数 > 1 | W=64 → 4 chunks | ✅ 触发 |
+| `slot_topk`(v8) | 选择性聚合（topk 读） | 读侧与 sum 有差异 | T=256: maxdiff 0.944 | ✅ 真分化 |
+| **`dla_cycle`(v7)** | 信息感知槽合并（DLA Alg.2） | K < chunk 数 时输出应分化 | **T=1024 K=2/4/8 全部 ≤8.3e-07** | ❌ **未分化** |
+
+**v7 判定详情**：`fused_fw_dla_cycle.py` 的合并实现自带"简化/近似"注释
+（`new_S = S2[:, :, :-1, :]` 直接去尾，未做 Alg.2 的紧凑化；每 batch 独立选最低密度用 loop 近似）。
+→ **矩阵里 `dla_cycle` 的读数实为 `fw_cycle` 的成绩**；DLA 的差异化从未被真正评测。
+→ 若要宣称 v7 机制有效，**必须先完整实现 DLA Algorithm 2 再重测**。
+
+### 4.3 口径锚点验证（确认尺子未漂移）
+| 架构 | 旧值（泄漏版） | 本次实测 | 判定 |
+|---|---|---|---|
+| `la_cycle`(v5，不中招) | 84.57 | 78.56 | ✅ 同量级 |
+| `bdh`（不中招） | 88.41 | 93.66 | ✅ 同量级 |
+| `tf`（不中招） | 168.98 | 94.58（s0=167.43 为离群） | ✅ 同量级 |
+| `fw_cycle`(v6，中招) | 82.39 | 354.69（W=block）/ **93.05（W=64）** | ❌ 旧值作废 |
+
+### 4.4 因果性验收（每架构必过）
+`benchmarks/probe_causality_all.py`（10 架构）+ `probe_causality_full_variants.py`（批1 冠军/省参冠军）
+→ **全部 maxdiff = 0**。脚本：`verify_full_softmax_fix.py`（含 raw 不变量回归）。
 
 ---
 
-## 5. 已证伪清单（不要再重犯）
+## 5. 作废清单（不要再引用）
 
-| 假设 | 证伪证据 |
+| 原结论 | 作废原因 |
 |---|---|
-| v6 = 能力 + 真 O(T) 双达标 | 仅在蒸馏模仿分成立；真训 T=8192 输 TF 0.99 nats |
-| 加参数（扩 N）能救 v6 | ×16 结构参数 → 仅 0.093 nats |
-| 「长上下文成本赢」 | 训练实测慢 4.03×（未接线）→ opt5 后约 1.84× |
-| tie embeddings 可省参 | KL 93→1299，崩 14× |
-| weight-sharing 加深能补能力 | 4 层 115 → 16 层 178，恶化 |
-| 「我们的架构慢 4×」 | **脏评测**：TF 用 SDPA 融合内核、我方用未优化实现；opt5 接口后 2.19× |
+| 「v6 能力更强（KL 82.39 < v5 84.57）」 | **D1 泄漏 artifact**：修复后 v6 = 354.69，实为大幅输 v5 |
+| 「v6 能力 + 真 O(T) 双达标」 | 能力那半随 D1 作废；O(T) 那半（斜率 0.76）待复验 |
+| 批 2 全部读数（D=128 蒸馏） | 含中招架构，整批作废 |
+| 批 1 全部读数（D=768 蒸馏） | 架构本身不中招，但**旧口径已弃用**，须按 §4 尺子重跑后才可引用 |
+| 批 3 真训读数（T=8192 / N 扫描） | 同上，旧口径弃用 |
+| `CLASH_FUSEDFW_FULL_SOFTMAX.md` 的 softmax 消融 | **D2**：比的是"有泄漏版 vs 无泄漏版"，不公平（原始文档已删，须重跑） |
+| 「我们的架构慢 4×」 | 脏评测：对手用 SDPA 融合内核、我方用未优化实现（opt5 接线后 2.19×） |
+| **`dla_cycle`(v7) 的矩阵读数 93.05** | **实为 `fw_cycle` 的成绩**：DLA 合并是简化实现，T=1024 / K=2,4,8 实测全部 ≤8.3e-07 **未分化** |
+| 「v6 退化到 354 = 架构崩塌」（我的初判） | **误判**：实为 W=block 时 chunk 数=1、跨块记忆被静默关闭；W=64 → 93.05 |
+| 「V6_BREAKTHROUGH：v6 能力 + O(T) 双达标」 | 能力那半是 D1 泄漏 artifact（见上） |
 
 ## 6. 铁律（每次对轰前逐条核）
 
-1. 速度对轰：**双方必须同优化等级**，且优化必须**真的接进评测入口**（本例 opt5 未接线，教训在案）。
-2. 三批尺子（D=768 蒸馏 / D=128 蒸馏 / D=256 真训）**数字不可互比**，引用时必须写配置。
+0. **分块架构报分前必须验证 chunk 数 = T/W > 1**：W = block 时整层只有 1 个 chunk，跨块记忆被
+   **静默关闭**，架构退化成「仅块内自注意」，读数与架构能力无关（v6 的 354 全由此产生）。
+   各架构对比必须用**同一个 W**，否则是脏评测。
+
+1. 速度对轰：**双方必须同优化等级**，且优化必须**真的接进评测入口**。
+2. 不同尺子（配置/口径）的数字**不可互比**，引用时必须写配置。
 3. KL = 模仿分，不是能力分；能力分须真实 checkpoint + 标准评测。
-4. 报数必须附：配置、预算、seed、优化形态。
+4. 报数必须附：配置、预算、seed、优化形态、**因果性验收状态**。
+5. **缺陷无存量豁免**：底层版本带缺陷，其历史读数一律作废重测。
+6. 修 bug 必须做**不变量回归**（如 D2 修复后 raw 路径 logits 逐位不变），证明未波及有效读数。

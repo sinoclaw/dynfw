@@ -511,3 +511,91 @@ def to_opt5_raw(model, strict_bf16=True, bf16_prefix=False):
         blk.attn.strict_bf16 = strict_bf16
         blk.attn.bf16_prefix = bf16_prefix
     return model
+
+
+# ---------------------------------------------------------------------------
+# B 线：块内注意走 **TileLang raw kernel**（分数矩阵不落显存）+ 跨块 exclusive 前缀和。
+#
+# 孤立段实测（B=2 nh=8 w=256 N=128 D=256，bf16，5×50 中位）：
+#   A 线交付 compile(物化展开) 105.78 ms   vs   TileLang kernel 15.44 ms  → 6.85×
+#   （torch.compile 对纯 bmm 段无效：105.78 vs eager 105.31；其收益只在整模型的小算子融合）
+# ⚠️ kernel 的 S 维度是编译期常量 → 每个新 T 需重新编译（约 6s），测速时须排除编译时间。
+# ---------------------------------------------------------------------------
+class FWAttentionTLRaw(FWAttention):
+    """B 线实现：TileLang 块内 + exclusive 前缀和跨块。参数与基线完全一致。"""
+
+    strict_bf16 = True
+    bf16_prefix = False
+    block_M = 64
+    block_N = 64
+    threads = 128
+    num_stages = 1
+    _kern_cache = {}
+
+    @classmethod
+    def _kernel(cls, B, nh, T, N, D_):
+        key = (B, nh, T, N, D_, cls.block_M, cls.block_N, cls.threads, cls.num_stages)
+        if key not in cls._kern_cache:
+            import sys as _sys
+            if '/data/dynfw' not in _sys.path:
+                _sys.path.insert(0, '/data/dynfw')
+            from benchmarks.tl_attn_raw import build_tilelang_raw
+            cls._kern_cache[key] = build_tilelang_raw(
+                B, nh, T, N, D_, 'bf16', cls.block_M, cls.block_N, cls.threads, cls.num_stages)
+        return cls._kern_cache[key]
+
+    def forward(self, Q, K, V, memories=None, W=512):
+        assert K is Q
+        B, nh, T, N = Q.size()
+        D = self.D
+        if W <= 0 or T % W != 0:
+            return super().forward(Q, K, V, memories, W)
+        nch = T // W
+        bf_ = B * nh * nch
+
+        r = torch.arange(0, T, device=self.freqs.device, dtype=torch.float32).view(1, 1, -1, 1)
+        QR = FWAttentionOpt.rope_fast(r * self.freqs, Q)
+
+        # ① 块内 raw 因果注意：TileLang kernel
+        #    ⚠️ 语义边界：v6 的块内注意是【只在块内】(窗口 = W)，跨块信息必须走 fast-weight。
+        #    因此把 [B,nh,nch,W,N] 折成 batch 维 (B*nch) 逐块独立做因果，
+        #    **不能**把整条序列一起喂进去（那会变成全局因果 = 偷读跨块）。
+        # ⚠️ batch 维顺序必须与后面 qq/vv 的 reshape 一致：(b, h, c)，heads 折成 1。
+        #    q5 = QR.reshape -> 纯视图零拷贝；只有 V 的 nh 展开物化一次（与 OPT5Raw 同）。
+        kern = self._kernel(bf_, 1, W, N, D)
+        q5 = QR.reshape(bf_, 1, W, N)
+        v5 = V.view(B, 1, nch, W, D).expand(B, nh, nch, W, D).reshape(bf_, 1, W, D)
+        if q5.dtype != torch.bfloat16:
+            q5 = q5.to(torch.bfloat16)
+        if v5.dtype != torch.bfloat16:
+            v5 = v5.to(torch.bfloat16)
+        a = kern(q5, q5, v5).reshape(bf_, W, D).to(QR.dtype)     # [bf_, W, D] 对齐 o 的形状
+
+        # ② 每块 Σ k⊗v（bf16 bmm，对齐 OPT5Raw）
+        qq = QR.reshape(bf_, W, N)
+        vv = V.view(B, 1, nch, W, D).expand(B, nh, nch, W, D).reshape(bf_, W, D)
+        kv = torch.bmm(qq.transpose(1, 2), vv).view(B, nh, nch, N, D)
+
+        # ③ exclusive 前缀和
+        dt_sum = kv.dtype if self.bf16_prefix else torch.float32
+        S = kv.cumsum(dim=2, dtype=dt_sum) - kv
+        if memories is not None:
+            S = S + memories.unsqueeze(2)
+
+        # ④ 跨块检索
+        o = torch.bmm(qq, S.reshape(bf_, N, D))
+        out = (a + o).reshape(B, nh, T, D)
+
+        new_mem = kv.sum(dim=2, dtype=torch.float32)
+        if memories is not None:
+            new_mem = new_mem + memories.float()
+        return out, new_mem
+
+
+def to_tl_raw(model, **kw):
+    """原地换成 TileLang raw 实现。参数完全不变。"""
+    for blk in model.blocks:
+        blk.attn.__class__ = FWAttentionTLRaw
+        for k, v in kw.items():
+            setattr(blk.attn, k, v)
+    return model

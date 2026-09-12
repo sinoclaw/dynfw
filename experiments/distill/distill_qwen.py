@@ -68,6 +68,12 @@ def make_student(args, teacher_vocab, device):
                               n_layer=args.n_layer, steps=args.cycle_steps,
                               mlp_mult=args.mlp_mult, W=args.block)
 
+    elif args.arch == 'fusedfw_vla_cycle':
+        from dynfw.models.fused_fw_vla_cycle import BDHBlockVLACycleLM
+        m = BDHBlockVLACycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
+                               n_layer=args.n_layer, steps=args.cycle_steps,
+                               mlp_mult=args.mlp_mult, W=args.block)
+
     elif args.arch == 'fusedfw_rawfw_cycle':
         from dynfw.models.fused_fw_rawfw_cycle import BDHBlockRawFWCycleLM
         m = BDHBlockRawFWCycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
@@ -157,7 +163,7 @@ def main():
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     ap = argparse.ArgumentParser()
-    ap.add_argument('--arch', type=str, default='fusedfw', choices=['fusedfw', 'fusedfw_cycle', 'fusedfw_rec', 'fusedfw_la', 'fusedfw_la_cycle', 'fusedfw_fw_cycle', 'fusedfw_rawfw_cycle', 'fusedfw_gdn_cycle', 'fusedfw_dla_cycle', 'fusedfw_slot_topk', 'fusedfw_full', 'fusedfw_full_shared', 'fusedfw_lin', 'bdh_gla', 'bdh_gla2', 'bdh_gla3', 'bdh', 'bdh_rawfw_qwen', 'tf'],
+    ap.add_argument('--arch', type=str, default='fusedfw', choices=['fusedfw', 'fusedfw_cycle', 'fusedfw_rec', 'fusedfw_la', 'fusedfw_la_cycle', 'fusedfw_fw_cycle', 'fusedfw_vla_cycle', 'fusedfw_rawfw_cycle', 'fusedfw_gdn_cycle', 'fusedfw_dla_cycle', 'fusedfw_slot_topk', 'fusedfw_full', 'fusedfw_full_shared', 'fusedfw_lin', 'bdh_gla', 'bdh_gla2', 'bdh_gla3', 'bdh', 'bdh_rawfw_qwen', 'tf'],
                     help='学生架构：fusedfw / fusedfw_rec / fusedfw_la / fusedfw_full(BDH完整) / bdh / tf')
     ap.add_argument('--teacher', type=str, default='Qwen/Qwen3-0.6B')
     ap.add_argument('--data', type=str, required=True, help='语料文本文件 (每行一行)')
@@ -326,3 +332,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

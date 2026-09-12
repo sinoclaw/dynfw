@@ -54,9 +54,19 @@ class CausalAttention(nn.Module):
             .view(1, 1, -1, 1)
         ) * self.freqs
         QR = self.rope(r_phases, Q)
-        scores = (QR @ QR.mT).tril(diagonal=-1)
+        scores = QR @ QR.mT
         if self.use_softmax:
-            scores = F.softmax(scores, dim=-1)
+            # 因果修复（2026-09-12）：原实现在 tril(-1) 之后 softmax —— 上三角被置 0，
+            # softmax 会把它变成 exp(0)=1 的非零权重 → 偷看未来（探针实测 maxdiff 7.71e-2）。
+            # 正确：先 masked_fill(-inf) 再 softmax；i=0 行无可见位置（全 -inf）→ 归零。
+            # 掩码用 triu(diagonal=0)（屏蔽 j>=i），与下方 raw 的 tril(-1) 可见集合严格一致。
+            causal = torch.triu(
+                torch.ones(T, T, dtype=torch.bool, device=scores.device), diagonal=0
+            )
+            scores = F.softmax(scores.masked_fill(causal, float('-inf')), dim=-1)
+            scores = torch.nan_to_num(scores, nan=0.0)
+        else:
+            scores = scores.tril(diagonal=-1)   # raw：上三角 = 算术真 0，严格因果
         return scores @ V
 
 

@@ -286,6 +286,73 @@ v6 vs tf → t=−158.18；v6.6 vs tf → t=−194.88（均 p<0.0001）。
 
 ---
 
+
+## 4.2e v6.7 = v6.6 门控段换 FLA chunked 内核 —— 能力/速度双料第一（2026-09-13）
+
+### 动机
+v6.6 的门控 `M = α·M + k⊗v` 破坏了 v6 的"纯累加"结构 ⇒ cumsum 前缀和不再可用 ⇒ 跨块记忆段
+退化为 `T/W` 次串行循环（T=8192/W=64 = 128 次）。**实测该段正是 v6.6 慢 2.9× 的根因**
+（隔离 bench：同形状下顺序循环 178.1ms vs FLA 14.6ms）。
+
+### 实现（`dynfw/models/fused_fw_gdn_fla.py`，`GDNFastAttnFLA`）
+- **数学依据**：v6.6 的 `agg = 块内 raw 注意 + q_t@M_prev` = **带衰减的全局线性注意 = GLA**
+- 用 `fla.ops.simple_gla.fused_chunk_simple_gla`（**head-wise 标量门控**，正是我们的形式）。
+  **不是 `gated_delta_rule`** —— 那多了 `M·k` 预测残差项，正是 v6.5 崩掉的原因
+- 参数量与 v6.6 **完全一致**（45,188,098），可权重互转
+- **`gate_mode='block'` 可精确复现 v6.6**：块内 `g=0`（不衰减）+ 块首 `g=log α_blk`
+  ⟹ `S_块末 = α_blk·S_块初 + Σ_j k_j⊗v_j`，实测同 seed 小配置 final_loss 差 **5.6e-6**（实质逐位一致）
+
+### 关键提速：FLA 的 kernel 在 fp32 下反向慢 11×（先测后改，两条独立证据）
+- **op profile**：FLA kernel 系占步长 **70.6%**；内存搬运仅 2.7% ⇒ **排除** permute/fp32 强转嫌疑
+- **dtype 微基**（同形状 T=8192/H=16/K=N512/V=D128）：
+  | dtype | 前向 | fwd+bwd |
+  |---|---|---|
+  | fp32 | 5.00ms | 162.38ms |
+  | bf16 | 2.23ms | **14.70ms** |
+  ⇒ **fp32 训练慢 11.05×**（前向仅差 2.24×）
+- **处置**：FLA 段走 bf16，其余保持 fp32。**这是修口径不是取巧** —— 对照组 opt5 本身即
+  `strict_bf16=True`，此前"fp32 的 FLA"比"bf16 的 opt5"本就不公平
+- 效果：**fwd+bwd 377.5ms → 68.7ms（快 5.5×）**
+
+### 战绩（T=8192 / 20块 / 50ep=1000step / 3 seed；判据跑前锁死）
+| 架构 | 中位 | 均值 | std | wall | 纯计算 fwd+bwd | 显存 |
+|---|---|---|---|---|---|---|
+| **v6.7 bf16 FLA** | **5738.0** | 5750.6 | **21.3** | 536.1s | **68.7ms** | **5.13GiB** |
+| v6.7 fp32 FLA（已作废） | 5830.7 | 5804.3 | 61.3 | 897.0s | 377.5ms | 5.75GiB |
+| v6.6 gdn | 7142.6 | 7105.2 | 80.4 | 1548.4s | 994.3ms | 5.56GiB |
+| v6 fw_cycle(opt5) | 8260.9 | 8316.1 | 92.1 | 537.8s | 91.2ms | 5.99GiB |
+| tf SDPA | 19734.9 | 19713.1 | 43.6 | 561.9s | — | — |
+
+**Welch t 检验**（`stat_util.py` 纯 stdlib；**注意其返回顺序是 `(t, df, p)`**）：
+```
+v6.7 vs v6   : t=-38.39  p=0.00036  ★ 改善 30.5%
+v6.7 vs v6.6 : t=-23.03  p=0.00095  ★ 改善 19.7%
+v6.7 vs tf   : t=-406.60 p<1e-6     ★ 改善 70.9%
+v6.7 bf16 vs fp32 : t=-1.17 p=0.342 不显著（1.6%）⇒ bf16 提速【无】能力代价
+```
+**速度三口径**：纯计算 **68.7ms**（比 v6+opt5 的 91.2ms 快 1.33×）；实验 wall 536.1s ≈ v6 的 537.8s。
+⚠️ **wall 含 mmap 读 47GB 教师 logits 的 IO（~537s）⇒ 报速度必须用纯计算口径**（此坑已犯过一次，
+见 §4.2c 收口实验 v6 与 tf 的 wall 都卡在 547s）。
+
+### 诚实标注（不可省）
+1. **收敛判据不通过**：末 200 step v6.7 降 24.5% / v6.6 降 25.4% / v6 降 26.0%（tf 仅 4.9%）
+   ⇒ **排名是趋势，非终局**
+2. **v6.7 相对 v6.6 同时改变两个变量**（①实现方式 ②门控粒度 块级→逐token）；
+   单变量归因见 `final_lt8192_flablock_*`（`--fla-gate block`，已验证可精确复现 v6.6）
+3. **`o` 读出差一个 α_t 因子**（FLA = `α_t·(q_t@S_{t-1})`，v6.6 = `q_t@M_prev`）⇒ **不声称位级等价**
+4. **FLA 在 fp32 下不可用**（慢 11×）⇒ v6.7 必须走 bf16
+5. **`torch.compile` 在本 venv 已失效**（triton 3.3.1 与 torch 2.5.1 的 inductor 不兼容）；
+   A 线历史读数已入库，**复现需回滚 triton 3.1.0**
+
+### 环境（复现前提）
+- `flash-linear-attention 0.5.2`：0.2.2 在 triton 3.1.0 下非法内存访问；**升级必须清 pip 缓存**
+  —— 缓存里的 wheel 残缺会导致 `fla/ops/` 整个目录缺失（表现为 `fla.ops.utils` unknown location）
+- `triton 3.3.1`：FLA 0.5.2 要求 ≥3.3 的 `Autotuner(do_bench=...)`
+- API：`from fla.ops.simple_gla.fused_chunk import fused_chunk_simple_gla`；
+  形状 `q/k:[B,T,H,K]`、`v:[B,T,H,V]`、`g:[B,T,H]`（**head-second + head-wise 标量门控**）
+- 教训：**`UV_DEFAULT_INDEX` 只对 uv 生效，pip 必须用 `-i` 指定源**（此前"用了清华源"的 pip
+  实际都在从 PyPI 官方源下载，小包没暴露、triton 155MB 卡死才发现）
+
 ## 7. 已删除版本（2026-09-12，v7 / v8 / v5）
 
 | 版本 | 原文件 | 删除理由（实测证据） |

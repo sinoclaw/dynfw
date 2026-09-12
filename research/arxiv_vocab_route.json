@@ -1,0 +1,1199 @@
+{
+ "vocabulary scaling law language model": [
+  {
+   "id": "2412.14559v1",
+   "title": "ScaMo: Exploring the Scaling Law in Autoregressive Motion Generation Model",
+   "date": "2024-12-19",
+   "authors": [
+    "Shunlin Lu",
+    "Jingbo Wang",
+    "Zeyu Lu",
+    "Ling-Hao Chen"
+   ],
+   "n_au": 9,
+   "cat": "cs.CV",
+   "comment": "",
+   "abs": "The scaling law has been validated in various domains, such as natural language processing (NLP) and massive computer vision tasks; however, its application to motion generation remains largely unexplored. In this paper, we introduce a scalable motion generation framework that includes the motion tokenizer Motion FSQ-VAE and a text-prefix autoregressive transformer. Through comprehensive experiments, we observe the scaling behavior of this system. For the first time, we confirm the existence of scaling laws within the context of motion generation. Specifically, our results demonstrate that the normalized test loss of our prefix autoregressive models adheres to a logarithmic law in relation to compute budgets. Furthermore, we also confirm the power law between Non-Vocabulary Parameters, Vocabulary Parameters, and Data Tokens with respect to compute budgets respectively. Leveraging the scaling law, we predict the optimal transformer size, vocabulary size, and data requirements for a compute budget of $1e18$. The test loss of the system, when trained with the optimal model size, vocabulary size, and required data, aligns precisely with the predicted test loss, thereby validating the scaling law."
+  },
+  {
+   "id": "1406.4441v2",
+   "title": "Scaling laws and fluctuations in the statistics of word frequencies",
+   "date": "2014-06-17",
+   "authors": [
+    "Martin Gerlach",
+    "Eduardo G. Altmann"
+   ],
+   "n_au": 2,
+   "cat": "physics.soc-ph",
+   "comment": "19 pages, 4 figures",
+   "abs": "In this paper we combine statistical analysis of large text databases and simple stochastic models to explain the appearance of scaling laws in the statistics of word frequencies. Besides the sublinear scaling of the vocabulary size with database size (Heaps' law), here we report a new scaling of the fluctuations around this average (fluctuation scaling analysis). We explain both scaling laws by modeling the usage of words by simple stochastic processes in which the overall distribution of word-frequencies is fat tailed (Zipf's law) and the frequency of a single word is subject to fluctuations across documents (as in topic models). In this framework, the mean and the variance of the vocabulary size can be expressed as quenched averages, implying that: i) the inhomogeneous dissemination of words cause a reduction of the average vocabulary size in comparison to the homogeneous case, and ii) correlations in the co-occurrence of words lead to an increase in the variance and the vocabulary size becomes a non-self-averaging quantity. We address the implications of these observations to the measurement of lexical richness. We test our results in three large text databases (Google-ngram, Enlgish Wikipedia, and a collection of scientific articles)."
+  },
+  {
+   "id": "2407.13623v3",
+   "title": "Scaling Laws with Vocabulary: Larger Models Deserve Larger Vocabularies",
+   "date": "2024-07-18",
+   "authors": [
+    "Chaofan Tao",
+    "Qian Liu",
+    "Longxu Dou",
+    "Niklas Muennighoff"
+   ],
+   "n_au": 8,
+   "cat": "cs.CL",
+   "comment": "NeurIPS 2024",
+   "abs": "Research on scaling large language models (LLMs) has primarily focused on model parameters and training data size, overlooking the role of vocabulary size. We investigate how vocabulary size impacts LLM scaling laws by training models ranging from 33M to 3B parameters on up to 500B characters with various vocabulary configurations. We propose three complementary approaches for predicting the compute-optimal vocabulary size: IsoFLOPs analysis, derivative estimation, and parametric fit of the loss function. Our approaches converge on the conclusion that the optimal vocabulary size depends on the compute budget, with larger models requiring larger vocabularies. Most LLMs, however, use insufficient vocabulary sizes. For example, we predict that the optimal vocabulary size of Llama2-70B should have been at least 216K, 7 times larger than its vocabulary of 32K. We validate our predictions empirically by training models with 3B parameters across different FLOPs budgets. Adopting our predicted optimal vocabulary size consistently improves downstream performance over commonly used vocabulary sizes. By increasing the vocabulary size from the conventional 32K to 43K, we improve performance on ARC-Challenge from 29.1 to 32.0 with the same 2.3e21 FLOPs. Our work highlights the importance of jointly considering tokenization and model scaling for efficient pre-training. The code and demo are available at https://github.com/sail-sg/scaling-with-vocab and https://hf.co/spaces/sail/scaling-with-vocab-demo."
+  },
+  {
+   "id": "2609.07681v1",
+   "title": "On the Recall Scaling Laws in Mamba: A Theoretical and Mechanistic Study via Hashing",
+   "date": "2026-09-07",
+   "authors": [
+    "Yuval Koren",
+    "Assaf Ben-Kish",
+    "Raja Giryes",
+    "Lior Wolf"
+   ],
+   "n_au": 5,
+   "cat": "cs.LG",
+   "comment": "53 pages, 20 figures. Code and experiments available at: https://github.com/yuvalko1/mamba-recall-scaling-laws",
+   "abs": "Associative Recall (AR) is the cognitive ability to learn and retrieve links between items in memory. In NLP, AR is used as a benchmark for evaluating the in-context memory capacity of architectures such as Mamba, and has been found to strongly correlate with language modeling performance. This paper explores AR from the perspective of mechanistic interpretability, aiming to reverse-engineer the exact internal algorithm used by Mamba to perform recall. Our key insight is that Mamba performs recall by implicitly learning linear hash functions, and we identify the low-level circuit that enables this behavior. Building on these findings and inspired by theoretical tools in similarity-preserving hashing, such as the Johnson-Lindenstrauss lemma, we develop a theoretical framework for analyzing AR, which we term Recall Scaling Laws. Given the vocabulary size and the number of facts in context, this framework allows us to (1) predict the embedding and state dimensions required for Mamba to achieve perfect recall, (2) predict recall success probability given the model dimensions, and (3) analyze multi-layer models and multi-head SSM patterns. Empirical results show that our theoretical findings are accurate and predictive, offering insights into how AR capacity scales with vocabulary, state, embedding size, and architecture."
+  },
+  {
+   "id": "1202.2903v1",
+   "title": "Scaling Laws in Human Language",
+   "date": "2012-02-14",
+   "authors": [
+    "Linyuan Lu",
+    "Zi-Ke Zhang",
+    "Tao Zhou"
+   ],
+   "n_au": 3,
+   "cat": "physics.data-an",
+   "comment": "6 pages, 4 figures",
+   "abs": "Zipf's law on word frequency is observed in English, French, Spanish, Italian, and so on, yet it does not hold for Chinese, Japanese or Korean characters. A model for writing process is proposed to explain the above difference, which takes into account the effects of finite vocabulary size. Experiments, simulations and analytical solution agree well with each other. The results show that the frequency distribution follows a power law with exponent being equal to 1, at which the corresponding Zipf's exponent diverges. Actually, the distribution obeys exponential form in the Zipf's plot. Deviating from the Heaps' law, the number of distinct words grows with the text length in three stages: It grows linearly in the beginning, then turns to a logarithmical form, and eventually saturates. This work refines previous understanding about Zipf's law and Heaps' law in language systems."
+  },
+  {
+   "id": "2209.13636v3",
+   "title": "Local Grammar-Based Coding Revisited",
+   "date": "2022-09-27",
+   "authors": [
+    "Łukasz Dębowski"
+   ],
+   "n_au": 1,
+   "cat": "cs.IT",
+   "comment": "41 pages, no figures",
+   "abs": "In the setting of minimal local grammar-based coding, the input string is represented as a grammar with the minimal output length defined via simple symbol-by-symbol encoding. This paper discusses four contributions to this field. First, we invoke a simple harmonic bound on ranked probabilities, which reminds Zipf's law and simplifies universality proofs for minimal local grammar-based codes. Second, we refine known bounds on the vocabulary size, showing its partial power-law equivalence with mutual information and redundancy. These bounds are relevant for linking Zipf's law with the neural scaling law for large language models. Third, we develop a framework for universal codes with fixed infinite vocabularies, recasting universal coding as matching ranked patterns that are independent of empirical data. Finally, we analyze grammar-based codes with finite vocabularies being empirical rank lists, proving that that such codes are also universal. These results extend foundations of universal grammar-based coding and reaffirm previously stated connections to power laws for human language and language models."
+  },
+  {
+   "id": "2511.12081v2",
+   "title": "From Scaling to Structured Expressivity: Rethinking Transformers for CTR Prediction",
+   "date": "2025-11-15",
+   "authors": [
+    "Bencheng Yan",
+    "Yuejie Lei",
+    "Zhiyuan Zeng",
+    "Zheye Deng"
+   ],
+   "n_au": 10,
+   "cat": "cs.IR",
+   "comment": "KDD 2026; The first four authors contributed equally to this work",
+   "abs": "Despite massive investments in scale, deep models for click-through rate (CTR) prediction often exhibit rapidly diminishing returns -- a stark contrast to the {predictable scaling laws} seen in large language models (LLMs). We identify the root cause as a {fundamental} \\textit{structural misalignment}: {standard} Transformers assume sequential compositionality, whereas CTR data demand combinatorial reasoning over {heterogeneous} fields. To restore alignment, we introduce the \\textbf{Field-Aware Transformer (FAT)}. {By reconstructing the standard Transformer block with field-centric parameters, FAT achieves \\textit{structured expressivity}, {fundamentally shifting the model complexity dependence from the total vocabulary size $n$ with the number of fields $F$ ($n \\gg F$).}} Crucially, to decouple model capacity from field cardinality, FAT employs a {Basis-Composed Hypernetwork} to synthesize field-specific parameters from shared bases, further reducing parameter complexity. {Theoretically, we ground this scaling behavior through a formal scaling law based on Rademacher complexity. Empirically, FAT outperforms exisiting state-of-the-art methods with up to \\textbf{+4.38\\%} AUC improvement, and delivers \\textbf{+2.33\\%} CTR and \\textbf{+0.66\\%} RPM in live production.} Our work establishes that scalable recommendation arises not from size alone, but from \\textit{structured expressivity} -- architectural coherence with data semantics."
+  },
+  {
+   "id": "2605.10780v2",
+   "title": "Beyond the Last Layer: Multi-Layer Representation Fusion for Visual Tokenization",
+   "date": "2026-05-11",
+   "authors": [
+    "Xuanyu Zhu",
+    "Yan Bai",
+    "Yang Shi",
+    "Yihang Lou"
+   ],
+   "n_au": 7,
+   "cat": "cs.CV",
+   "comment": "",
+   "abs": "Representation autoencoders that reuse frozen pretrained vision encoders as visual tokenizers have achieved strong reconstruction and generation quality. However, existing methods universally extract features from only the last encoder layer, discarding the rich hierarchical information distributed across intermediate layers. We show that low-level visual details survive in the last layer merely as attenuated residuals after multiple layers of semantic abstraction, and that explicitly fusing multi-layer features can substantially recover this lost information. We propose DRoRAE (Depth-Routed Representation AutoEncoder), a lightweight fusion module that adaptively aggregates all encoder layers via energy-constrained routing and incremental correction, producing an enriched latent compatible with a frozen pretrained decoder. A three-phase decoupled training strategy first learns the fusion under the implicit distributional constraint of the frozen decoder, then fine-tunes the decoder to fully exploit the enriched representation. On ImageNet-256, DRoRAE reduces rFID from 0.57 to 0.29 and improves generation FID from 1.74 to 1.65 (with AutoGuidance), with gains also transferring to text-to-image synthesis. Furthermore, we uncover a log-linear scaling law ($R^2{=}0.86$) between fusion capacity and reconstruction quality, identifying \\textit{representation richness} as a new, predictably scalable dimension for visual tokenizers analogous to vocabulary size in NLP."
+  },
+  {
+   "id": "2501.16975v2",
+   "title": "Over-Tokenized Transformer: Vocabulary is Generally Worth Scaling",
+   "date": "2025-01-28",
+   "authors": [
+    "Hongzhi Huang",
+    "Defa Zhu",
+    "Banggu Wu",
+    "Yutao Zeng"
+   ],
+   "n_au": 7,
+   "cat": "cs.CL",
+   "comment": "accepted by ICML2025",
+   "abs": "Tokenization is a fundamental component of large language models (LLMs), yet its influence on model scaling and performance is not fully explored. In this paper, we introduce Over-Tokenized Transformers, a novel framework that decouples input and output vocabularies to improve language modeling performance. Specifically, our approach scales up input vocabularies to leverage multi-gram tokens. Through extensive experiments, we uncover a log-linear relationship between input vocabulary size and training loss, demonstrating that larger input vocabularies consistently enhance model performance, regardless of model size. Using a large input vocabulary, we achieve performance comparable to double-sized baselines with no additional cost. Our findings highlight the importance of tokenization in scaling laws and provide practical insight for tokenizer design, paving the way for more efficient and powerful LLMs."
+  },
+  {
+   "id": "2601.09200v5",
+   "title": "A.X K1 Technical Report",
+   "date": "2026-01-14",
+   "authors": [
+    "Sung Jun Cheon",
+    "Jaekyung Cho",
+    "Seongho Choi",
+    "Hyunjun Eun"
+   ],
+   "n_au": 60,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "We introduce A.X K1, a 519B-parameter Mixture-of-Experts (MoE) language model trained from scratch. Our design leverages scaling laws to optimize training configurations and vocabulary size under fixed computational budgets. A.X K1 is pre-trained on a corpus of approximately 10T tokens, curated by a multi-stage data processing pipeline. Designed to bridge the gap between reasoning capability and inference efficiency, A.X K1 supports explicitly controllable reasoning to facilitate scalable deployment across diverse real-world scenarios. We propose a simple yet effective Think-Fusion training recipe, enabling user-controlled switching between thinking and non-thinking modes within a single unified model. Extensive evaluations demonstrate that A.X K1 achieves performance competitive with leading open-source models, while establishing a distinctive advantage in Korean-language benchmarks."
+  }
+ ],
+ "tokenizer-free / byte-level": [
+  {
+   "id": "2210.07111v1",
+   "title": "A Multi-dimensional Evaluation of Tokenizer-free Multilingual Pretrained Models",
+   "date": "2022-10-13",
+   "authors": [
+    "Jimin Sun",
+    "Patrick Fernandes",
+    "Xinyi Wang",
+    "Graham Neubig"
+   ],
+   "n_au": 4,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "Recent work on tokenizer-free multilingual pretrained models show promising results in improving cross-lingual transfer and reducing engineering overhead (Clark et al., 2022; Xue et al., 2022). However, these works mainly focus on reporting accuracy on a limited set of tasks and data settings, placing less emphasis on other important factors when tuning and deploying the models in practice, such as memory usage, inference speed, and fine-tuning data robustness. We attempt to fill this gap by performing a comprehensive empirical comparison of multilingual tokenizer-free and subword-based models considering these various dimensions. Surprisingly, we find that subword-based models might still be the most practical choice in many settings, achieving better performance for lower inference latency and memory usage. Based on these results, we encourage future work in tokenizer-free methods to consider these factors when designing and evaluating new models."
+  },
+  {
+   "id": "1908.10322v1",
+   "title": "Bridging the Gap for Tokenizer-Free Language Models",
+   "date": "2019-08-27",
+   "authors": [
+    "Dokook Choe",
+    "Rami Al-Rfou",
+    "Mandy Guo",
+    "Heeyoung Lee"
+   ],
+   "n_au": 5,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "Purely character-based language models (LMs) have been lagging in quality on large scale datasets, and current state-of-the-art LMs rely on word tokenization. It has been assumed that injecting the prior knowledge of a tokenizer into the model is essential to achieving competitive results. In this paper, we show that contrary to this conventional wisdom, tokenizer-free LMs with sufficient capacity can achieve competitive performance on a large scale dataset. We train a vanilla transformer network with 40 self-attention layers on the One Billion Word (lm1b) benchmark and achieve a new state of the art for tokenizer-free LMs, pushing these models to be on par with their word-based counterparts."
+  },
+  {
+   "id": "2401.13660v3",
+   "title": "MambaByte: Token-free Selective State Space Model",
+   "date": "2024-01-24",
+   "authors": [
+    "Junxiong Wang",
+    "Tushaar Gangavarapu",
+    "Jing Nathan Yan",
+    "Alexander M. Rush"
+   ],
+   "n_au": 4,
+   "cat": "cs.CL",
+   "comment": "Published at COLM 2024",
+   "abs": "Token-free language models learn directly from raw bytes and remove the inductive bias of subword tokenization. Operating on bytes, however, results in significantly longer sequences. In this setting, standard autoregressive Transformers scale poorly as the effective memory required grows with sequence length. The recent development of the Mamba state space model (SSM) offers an appealing alternative approach with a fixed-sized memory state and efficient decoding. We propose MambaByte, a token-free adaptation of the Mamba SSM trained autoregressively on byte sequences. In terms of modeling, we show MambaByte to be competitive with, and even to outperform, state-of-the-art subword Transformers on language modeling tasks while maintaining the benefits of token-free language models, such as robustness to noise. In terms of efficiency, we develop an adaptation of speculative decoding with tokenized drafting and byte-level verification. This results in a $2.6\\times$ inference speedup to the standard MambaByte implementation, showing similar decoding efficiency as the subword Mamba. These findings establish the viability of SSMs in enabling token-free language modeling."
+  },
+  {
+   "id": "2505.01006v1",
+   "title": "Token-free Models for Sarcasm Detection",
+   "date": "2025-05-02",
+   "authors": [
+    "Sumit Mamtani",
+    "Maitreya Sonawane",
+    "Kanika Agarwal",
+    "Nishanth Sanjeev"
+   ],
+   "n_au": 4,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "Tokenization is a foundational step in most natural language processing (NLP) pipelines, yet it introduces challenges such as vocabulary mismatch and out-of-vocabulary issues. Recent work has shown that models operating directly on raw text at the byte or character level can mitigate these limitations. In this paper, we evaluate two token-free models, ByT5 and CANINE, on the task of sarcasm detection in both social media (Twitter) and non-social media (news headlines) domains. We fine-tune and benchmark these models against token-based baselines and state-of-the-art approaches. Our results show that ByT5-small and CANINE outperform token-based counterparts and achieve new state-of-the-art performance, improving accuracy by 0.77% and 0.49% on the News Headlines and Twitter Sarcasm datasets, respectively. These findings underscore the potential of token-free models for robust NLP in noisy and informal domains such as social media."
+  },
+  {
+   "id": "2603.16917v1",
+   "title": "HoloByte: Continuous Hyperspherical Distillation for Tokenizer-Free Modeling",
+   "date": "2026-03-10",
+   "authors": [
+    "Vladimer Khasia"
+   ],
+   "n_au": 1,
+   "cat": "cs.LG",
+   "comment": "",
+   "abs": "Sequence modeling universally relies on discrete subword tokenization to circumvent the $\\mathcal{O}(N^2)$ computational intractability of native byte-level attention. However, this heuristic quantization imposes artificial morphological boundaries, enforces vocabulary dependence, and fractures the continuity of the optimization landscape. To resolve this dichotomy, we introduce \\textbf{HoloByte}: a strictly tokenizer-free framework utilizing Continuous Hyperspherical Distillation. HoloByte partitions discrete byte sequences into fixed-capacity chunks and projects them into a continuous, strictly bounded hyperspherical manifold via an invertible, dimension-preserving orthogonal rotation operator. This spatial superposition allows a macroscopic transformer to operate exclusively on compressed continuous representations, formally reducing the exact attention time complexity from $\\mathcal{O}(N^2D)$ to $\\mathcal{O}\\left( \\frac{N^2}{W^2}D + ND^2 \\right)$. A localized causal micro-decoder subsequently unbinds these representations to compute exact byte-level distributions. To govern this continuous trajectory, we propose a dual-objective formulation incorporating a mathematically precise Holographic Latent Mean Squared Error, which strictly bounds the gradient and guarantees asymptotic stability. Theoretically, we derive the minimal embedding dimension $D = Ω(W \\ln |\\mathcal{V}|)$ required to ensure error-free discrete recovery from the continuous manifold. Empirically, under strictly matched parameter constraints, HoloByte is systematically outperforming a comparable discrete Byte-Pair Encoding (BPE) baseline. These results establish Continuous Hyperspherical Distillation as a mathematically rigorous and computationally tractable foundation for vocabulary-invariant sequence modeling. The code is available at https://github.com/VladimerKhasia/HoloByte"
+  },
+  {
+   "id": "2608.06398v1",
+   "title": "EntropyMoE: Entropy-Aware Sparse Expert Routing for Tokenizer-Free LLMs",
+   "date": "2026-07-31",
+   "authors": [
+    "Bo Liu",
+    "Muxuab Yu",
+    "Yu Zhang",
+    "Pengfei Gao"
+   ],
+   "n_au": 5,
+   "cat": "cs.AI",
+   "comment": "",
+   "abs": "Recent byte-level large language models (LLMs) have made tokenizer-free modeling increasingly competitive by grouping bytes into dynamically sized patches. However, existing byte-patch architectures still apply the same dense feed-forward computation to every patch. This uniform computation cannot adapt model capacity to variations in patch semantics and granularity. We address this limitation with EntropyMoE, a Mixture-of-Experts (MoE) architecture designed for dynamic byte patches. EntropyMoE replaces the dense feed-forward modules in the global patch Transformer with Top-K expert layers. Each dynamic patch serves as the basic unit of expert routing, and its byte coverage determines its contribution to workload accounting. The router selects experts directly from patch entropy, using the same granularity signal that underlies dynamic patch construction to organize sparse computation. Patch entropy and length jointly define the feature space for regulating expert specialization. Experiments show that EntropyMoE achieves the lowest held-out bits-per-byte among matched dense and sparse baselines while maintaining comparable downstream accuracy. These results establish patch entropy as an effective routing coordinate for sparse conditional computation and extend Mixture-of-Experts modeling beyond tokenizer-based representations."
+  },
+  {
+   "id": "2401.03512v3",
+   "title": "CharPoet: A Chinese Classical Poetry Generation System Based on Token-free LLM",
+   "date": "2024-01-07",
+   "authors": [
+    "Chengyue Yu",
+    "Lei Zang",
+    "Jiaotuan Wang",
+    "Chenyi Zhuang"
+   ],
+   "n_au": 5,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "Automatic Chinese classical poetry generation has attracted much research interest, but achieving effective control over format and content simultaneously remains challenging. Traditional systems usually accept keywords as user inputs, resulting in limited control over content. Large language models (LLMs) improve content control by allowing unrestricted user instructions, but the token-by-token generation process frequently makes format errors. Motivated by this, we propose CharPoet, a Chinese classical poetry generation system based on token-free LLM, which provides effective control over both format and content. Our token-free architecture generates in a character-by-character manner, enabling precise control over the number of characters. Pruned from existing token-based LLMs, CharPoet inherits their pretrained capabilities and can generate poetry following instructions like \"Write me a poem for my mother's birthday.\" CharPoet achieves format accuracy above 0.96, outperforming Jiuge-GPT-2 (0.91) and GPT-4 (0.38). In terms of content quality, CharPoet surpasses traditional systems including Jiuge, and is comparable to other LLMs. Our system is open source and available at https://modelscope.cn/models/CharPoet/CharPoet. A video demonstration of CharPoet is available at https://youtu.be/voZ25qEp3Dc."
+  },
+  {
+   "id": "2105.13626v3",
+   "title": "ByT5: Towards a token-free future with pre-trained byte-to-byte models",
+   "date": "2021-05-28",
+   "authors": [
+    "Linting Xue",
+    "Aditya Barua",
+    "Noah Constant",
+    "Rami Al-Rfou"
+   ],
+   "n_au": 8,
+   "cat": "cs.CL",
+   "comment": "To be published in TACL 2022",
+   "abs": "Most widely-used pre-trained language models operate on sequences of tokens corresponding to word or subword units. By comparison, token-free models that operate directly on raw text (bytes or characters) have many benefits: they can process text in any language out of the box, they are more robust to noise, and they minimize technical debt by removing complex and error-prone text preprocessing pipelines. Since byte or character sequences are longer than token sequences, past work on token-free models has often introduced new model architectures designed to amortize the cost of operating directly on raw text. In this paper, we show that a standard Transformer architecture can be used with minimal modifications to process byte sequences. We characterize the trade-offs in terms of parameter count, training FLOPs, and inference speed, and show that byte-level models are competitive with their token-level counterparts. We also demonstrate that byte-level models are significantly more robust to noise and perform better on tasks that are sensitive to spelling and pronunciation. As part of our contribution, we release a new set of pre-trained byte-level Transformer models based on the T5 architecture, as well as all code and data used in our experiments."
+  },
+  {
+   "id": "2508.05628v1",
+   "title": "H-Net++: Hierarchical Dynamic Chunking for Tokenizer-Free Language Modelling in Morphologically-Rich Languages",
+   "date": "2025-08-07",
+   "authors": [
+    "Mehrdad Zakershahrak",
+    "Samira Ghodratnama"
+   ],
+   "n_au": 2,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "Byte-level language models eliminate fragile tokenizers but face computational challenges in morphologically-rich languages (MRLs), where words span many bytes. We propose H-NET++, a hierarchical dynamic-chunking model that learns linguistically-informed segmentation through end-to-end training. Key innovations include: (1) a lightweight Transformer context-mixer (1.9M parameters) for cross-chunk attention, (2) a two-level latent hyper-prior for document-level consistency, (3) specialized handling of orthographic artifacts (e.g. Persian ZWNJ), and (4) curriculum-based training with staged sequence lengths. On a 1.4B-token Persian corpus, H-NET++ achieves state-of-the-art results: 0.159 BPB reduction versus BPE-based GPT-2-fa (12% better compression), 5.4pp gain on ParsGLUE, 53% improved robustness to ZWNJ corruption, and 73.8% F1 on gold morphological boundaries. Our learned chunks align with Persian morphology without explicit supervision, demonstrating that hierarchical dynamic chunking provides an effective tokenizer-free solution for MRLs while maintaining computational efficiency."
+  },
+  {
+   "id": "2607.09530v2",
+   "title": "FreyaTTS: A Compact Tokenizer-Free Flow-Matching Transformer for Turkish-First Speech Synthesis",
+   "date": "2026-07-10",
+   "authors": [
+    "Ahmet Erdem Pamuk",
+    "Ömer Yentür",
+    "Ahmet Tunga Bayrak",
+    "Yavuz Alp Sencer Öztürk"
+   ],
+   "n_au": 5,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "We introduce Freya-TTS, a compact, tokenizer-free, Turkish-first text-to-speech model designed for highly reliable and efficient conversational synthesis. Freya-TTS is a 183.2M-parameter non-autoregressive conditional flow-matching Diffusion Transformer (DiT) that operates in the continuous latent space of the frozen AudioVAE2 (16 kHz encode, 48 kHz decode), allowing the model to focus its capacity on text-to-latent mapping while inheriting high-quality 48 kHz reconstruction. We advance the framework along three key dimensions: (1) rule-free end-to-end modeling from a 92-symbol Turkish character vocabulary without a phonemizer, grapheme-to-phoneme frontend, or discrete speech tokenizer, with digit strings expanded to their spoken form at the text frontend; (2) non-autoregressive parallel denoising, which predicts the entire latent sequence simultaneously over a predicted duration; and (3) a production-oriented two-stage post-training recipe consisting of single-speaker voice locking and short-utterance coverage, improving speaker consistency and robustness on short inputs. On the Freya-TR-Eval benchmark, Freya-TTS achieves a band-matched word error rate (WER) of 8.0% and character error rate (CER) of 3.0%, lower error than both larger open systems in its field, XTTS-v2 and F5-TTS, at 40-55% of their parameter count, together with the highest naturalness (MOS) among the compact systems. The model achieves a real-time factor of 0.11 on a consumer GPU (RTX 4090; ~0.14 mean on an H100) and synthesizes in real time on a laptop CPU, making it well suited for resource-constrained edge deployment. We release the model weights, training and inference code, and evaluation benchmark under the Apache-2.0 license."
+  },
+  {
+   "id": "2509.24650v1",
+   "title": "VoxCPM: Tokenizer-Free TTS for Context-Aware Speech Generation and True-to-Life Voice Cloning",
+   "date": "2025-09-29",
+   "authors": [
+    "Yixuan Zhou",
+    "Guoyang Zeng",
+    "Xin Liu",
+    "Xiang Li"
+   ],
+   "n_au": 12,
+   "cat": "cs.SD",
+   "comment": "Technical Report",
+   "abs": "Generative models for speech synthesis face a fundamental trade-off: discrete tokens ensure stability but sacrifice expressivity, while continuous signals retain acoustic richness but suffer from error accumulation due to task entanglement. This challenge has driven the field towards multi-stage pipelines that rely on pre-trained speech tokenizers, but these create a semantic-acoustic divide, limiting holistic and expressive speech generation. We resolve these dilemma through hierarchical semantic-acoustic modeling with semi-discrete residual representations and present a novel tokenizer-free TTS model VoxCPM. Our framework introduces a differentiable quantization bottleneck that induces natural specialization: a Text-Semantic Language Model (TSLM) generates semantic-prosodic plans, while a Residual Acoustic Model (RALM) recovers fine-grained acoustic details. This hierarchical semantic-acoustic representation guides a local diffusion-based decoder to generate high-fidelity speech latents. Critically, the entire architecture is trained end-to-end under a simple diffusion objective, eliminating dependency on external speech tokenizers. Trained on a massive 1.8 million hours of bilingual corpus, our VoxCPM-0.5B model achieves state-of-the-art zero-shot TTS performance among open-source systems, demonstrating that our approach delivers expressive and stable synthesis. Besides, VoxCPM shows the capability to comprehend text to infer and generate appropriate prosody and style, delivering speech with context-aware expressiveness and natural flow. To facilitate community-driven research and development, VoxCPM is publicly accessible under Apache 2.0."
+  },
+  {
+   "id": "2212.10474v2",
+   "title": "ByGPT5: End-to-End Style-conditioned Poetry Generation with Token-free Language Models",
+   "date": "2022-12-20",
+   "authors": [
+    "Jonas Belouadi",
+    "Steffen Eger"
+   ],
+   "n_au": 2,
+   "cat": "cs.CL",
+   "comment": "Accepted at ACL 2023 (main track)",
+   "abs": "State-of-the-art poetry generation systems are often complex. They either consist of task-specific model pipelines, incorporate prior knowledge in the form of manually created constraints, or both. In contrast, end-to-end models would not suffer from the overhead of having to model prior knowledge and could learn the nuances of poetry from data alone, reducing the degree of human supervision required. In this work, we investigate end-to-end poetry generation conditioned on styles such as rhyme, meter, and alliteration. We identify and address lack of training data and mismatching tokenization algorithms as possible limitations of past attempts. In particular, we successfully pre-train ByGPT5, a new token-free decoder-only language model, and fine-tune it on a large custom corpus of English and German quatrains annotated with our styles. We show that ByGPT5 outperforms other models such as mT5, ByT5, GPT-2 and ChatGPT, while also being more parameter efficient and performing favorably compared to humans. In addition, we analyze its runtime performance and demonstrate that it is not prone to memorization. We make our code, models, and datasets publicly available."
+  }
+ ],
+ "byte latent transformer": [
+  {
+   "id": "2605.08044v1",
+   "title": "Fast Byte Latent Transformer",
+   "date": "2026-05-08",
+   "authors": [
+    "Julie Kallini",
+    "Artidoro Pagnoni",
+    "Tomasz Limisiewicz",
+    "Gargi Ghosh"
+   ],
+   "n_au": 8,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "Recent byte-level language models (LMs) match the performance of token-level models without relying on subword vocabularies, yet their utility is limited by slow, byte-by-byte autoregressive generation. We address this bottleneck in the Byte Latent Transformer (BLT) through new training and generation techniques. First, we introduce BLT Diffusion (BLT-D), a new model and our fastest BLT variant, trained with an auxiliary block-wise diffusion objective alongside the standard next-byte prediction loss. This enables an inference procedure that generates multiple bytes in parallel per decoding step, substantially reducing the number of forward passes required to generate a sequence. Second, we propose two extensions inspired by speculative decoding that trade some of this speed for higher generation quality: BLT Self-speculation (BLT-S), in which BLT's local decoder continues generating past its normal patch boundaries to draft bytes, which are then verified with a single full-model forward pass; and BLT Diffusion+Verification (BLT-DV), which augments BLT-D with an autoregressive verification step after diffusion-based generation. All methods may achieve an estimated memory-bandwidth cost over 50% lower than BLT on generation tasks. Each approach offers its own unique advantages, together removing key barriers to the practical use of byte-level LMs."
+  },
+  {
+   "id": "2412.09871v1",
+   "title": "Byte Latent Transformer: Patches Scale Better Than Tokens",
+   "date": "2024-12-13",
+   "authors": [
+    "Artidoro Pagnoni",
+    "Ram Pasunuru",
+    "Pedro Rodriguez",
+    "John Nguyen"
+   ],
+   "n_au": 14,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "We introduce the Byte Latent Transformer (BLT), a new byte-level LLM architecture that, for the first time, matches tokenization-based LLM performance at scale with significant improvements in inference efficiency and robustness. BLT encodes bytes into dynamically sized patches, which serve as the primary units of computation. Patches are segmented based on the entropy of the next byte, allocating more compute and model capacity where increased data complexity demands it. We present the first FLOP controlled scaling study of byte-level models up to 8B parameters and 4T training bytes. Our results demonstrate the feasibility of scaling models trained on raw bytes without a fixed vocabulary. Both training and inference efficiency improve due to dynamically selecting long patches when data is predictable, along with qualitative improvements on reasoning and long tail generalization. Overall, for fixed inference costs, BLT shows significantly better scaling than tokenization-based models, by simultaneously growing both patch and model size."
+  }
+ ],
+ "ByT5 byte-to-byte": [
+  {
+   "id": "2201.13242v2",
+   "title": "Correcting diacritics and typos with a ByT5 transformer model",
+   "date": "2022-01-31",
+   "authors": [
+    "Lukas Stankevičius",
+    "Mantas Lukoševičius",
+    "Jurgita Kapočiūtė-Dzikienė",
+    "Monika Briedienė"
+   ],
+   "n_au": 5,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "Due to the fast pace of life and online communications and the prevalence of English and the QWERTY keyboard, people tend to forgo using diacritics, make typographical errors (typos) when typing in other languages. Restoring diacritics and correcting spelling is important for proper language use and the disambiguation of texts for both humans and downstream algorithms. However, both of these problems are typically addressed separately: the state-of-the-art diacritics restoration methods do not tolerate other typos, but classical spellcheckers also cannot deal adequately with all the diacritics missing. In this work, we tackle both problems at once by employing the newly-developed universal ByT5 byte-level seq2seq transformer model that requires no language-specific model structures. For a comparison, we perform diacritics restoration on benchmark datasets of 12 languages, with the addition of Lithuanian. The experimental investigation proves that our approach is able to achieve results (> 98%) comparable to the previous state-of-the-art, despite being trained less and on fewer data. Our approach is also able to restore diacritics in words not seen during training with > 76% accuracy. Our simultaneous diacritics restoration and typos correction approach reaches > 94% alpha-word accuracy on the 13 languages. It has no direct competitors and strongly outperforms classical spell-checking or dictionary-based approaches. We also demonstrate all the accuracies to further improve with more training. Taken together, this shows the great real-world application potential of our suggested methods to more data, languages, and error classes."
+  },
+  {
+   "id": "2204.03067v2",
+   "title": "ByT5 model for massively multilingual grapheme-to-phoneme conversion",
+   "date": "2022-04-06",
+   "authors": [
+    "Jian Zhu",
+    "Cong Zhang",
+    "David Jurgens"
+   ],
+   "n_au": 3,
+   "cat": "cs.CL",
+   "comment": "Interspeech 2022",
+   "abs": "In this study, we tackle massively multilingual grapheme-to-phoneme conversion through implementing G2P models based on ByT5. We have curated a G2P dataset from various sources that covers around 100 languages and trained large-scale multilingual G2P models based on ByT5. We found that ByT5 operating on byte-level inputs significantly outperformed the token-based mT5 model in terms of multilingual G2P. Pairwise comparison with monolingual models in these languages suggests that multilingual ByT5 models generally lower the phone error rate by jointly learning from a variety of languages. The pretrained model can further benefit low resource G2P through zero-shot prediction on unseen languages or provides pretrained weights for finetuning, which helps the model converge to a lower phone error rate than randomly initialized weights. To facilitate future research on multilingual G2P, we make available our code and pretrained multilingual G2P models at: https://github.com/lingjzhu/CharsiuG2P."
+  },
+  {
+   "id": "2405.13350v2",
+   "title": "Efficacy of ByT5 in Multilingual Translation of Biblical Texts for Underrepresented Languages",
+   "date": "2024-05-22",
+   "authors": [
+    "Corinne Aars",
+    "Lauren Adams",
+    "Xiaokan Tian",
+    "Zhaoyu Wang"
+   ],
+   "n_au": 9,
+   "cat": "cs.CL",
+   "comment": "LXAI Workshop at the 2024 Annual Conference of the North American Chapter of the Association for Computational",
+   "abs": "This study presents the development and evaluation of a ByT5-based multilingual translation model tailored for translating the Bible into underrepresented languages. Utilizing the comprehensive Johns Hopkins University Bible Corpus, we trained the model to capture the intricate nuances of character-based and morphologically rich languages. Our results, measured by the BLEU score and supplemented with sample translations, suggest the model can improve accessibility to sacred texts. It effectively handles the distinctive biblical lexicon and structure, thus bridging the linguistic divide. The study also discusses the model's limitations and suggests pathways for future enhancements, focusing on expanding access to sacred literature across linguistic boundaries."
+  },
+  {
+   "id": "2410.11627v2",
+   "title": "Tokenization and Morphology in Multilingual Language Models: A Comparative Analysis of mT5 and ByT5",
+   "date": "2024-10-15",
+   "authors": [
+    "Thao Anh Dang",
+    "Limor Raviv",
+    "Lukas Galke"
+   ],
+   "n_au": 3,
+   "cat": "cs.CL",
+   "comment": "8 pages",
+   "abs": "Morphology is a crucial factor for multilingual language modeling as it poses direct challenges for tokenization. Here, we seek to understand how tokenization influences the morphological knowledge encoded in multilingual language models. Specifically, we capture the impact of tokenization by contrasting two multilingual language models: mT5 and ByT5. The two models share the same architecture, training objective, and training data and only differ in their tokenization strategies: subword tokenization vs.\\@ character-level tokenization. Probing the morphological knowledge encoded in these models on four tasks and 17 languages, our analyses show that the models learn the morphological systems of some languages better than others and that morphological information is encoded in the middle and late layers. Finally, we show that languages with more irregularities benefit more from having a higher share of the pre-training data."
+  },
+  {
+   "id": "2403.09622v2",
+   "title": "Glyph-ByT5: A Customized Text Encoder for Accurate Visual Text Rendering",
+   "date": "2024-03-14",
+   "authors": [
+    "Zeyu Liu",
+    "Weicong Liang",
+    "Zhanhao Liang",
+    "Chong Luo"
+   ],
+   "n_au": 7,
+   "cat": "cs.CV",
+   "comment": "ECCV 2024, 19 pages, 19 figures",
+   "abs": "Visual text rendering poses a fundamental challenge for contemporary text-to-image generation models, with the core problem lying in text encoder deficiencies. To achieve accurate text rendering, we identify two crucial requirements for text encoders: character awareness and alignment with glyphs. Our solution involves crafting a series of customized text encoder, Glyph-ByT5, by fine-tuning the character-aware ByT5 encoder using a meticulously curated paired glyph-text dataset. We present an effective method for integrating Glyph-ByT5 with SDXL, resulting in the creation of the Glyph-SDXL model for design image generation. This significantly enhances text rendering accuracy, improving it from less than $20\\%$ to nearly $90\\%$ on our design image benchmark. Noteworthy is Glyph-SDXL's newfound ability for text paragraph rendering, achieving high spelling accuracy for tens to hundreds of characters with automated multi-line layouts. Finally, through fine-tuning Glyph-SDXL with a small set of high-quality, photorealistic images featuring visual text, we showcase a substantial improvement in scene text rendering capabilities in open-domain real images. These compelling outcomes aim to encourage further exploration in designing customized text encoders for diverse and challenging tasks."
+  },
+  {
+   "id": "2302.14220v3",
+   "title": "Are Character-level Translations Worth the Wait? Comparing ByT5 and mT5 for Machine Translation",
+   "date": "2023-02-28",
+   "authors": [
+    "Lukas Edman",
+    "Gabriele Sarti",
+    "Antonio Toral",
+    "Gertjan van Noord"
+   ],
+   "n_au": 5,
+   "cat": "cs.CL",
+   "comment": "This version of our work is a pre-MIT Press publication version",
+   "abs": "Pretrained character-level and byte-level language models have been shown to be competitive with popular subword models across a range of Natural Language Processing (NLP) tasks. However, there has been little research on their effectiveness for neural machine translation (NMT), particularly within the popular pretrain-then-finetune paradigm. This work performs an extensive comparison across multiple languages and experimental conditions of character- and subword-level pretrained models (ByT5 and mT5, respectively) on NMT. We show the effectiveness of character-level modeling in translation, particularly in cases where fine-tuning data is limited. In our analysis, we show how character models' gains in translation quality are reflected in better translations of orthographically similar words and rare words. While evaluating the importance of source texts in driving model predictions, we highlight word-level patterns within ByT5, suggesting an ability to modulate word-level and character-level information during generation. We conclude by assessing the efficiency tradeoff of byte models, suggesting their usage in non-time-critical scenarios to boost translation quality."
+  },
+  {
+   "id": "2110.15248v2",
+   "title": "ÚFAL at MultiLexNorm 2021: Improving Multilingual Lexical Normalization by Fine-tuning ByT5",
+   "date": "2021-10-28",
+   "authors": [
+    "David Samuel",
+    "Milan Straka"
+   ],
+   "n_au": 2,
+   "cat": "cs.CL",
+   "comment": "Accepted to W-NUT 2021",
+   "abs": "We present the winning entry to the Multilingual Lexical Normalization (MultiLexNorm) shared task at W-NUT 2021 (van der Goot et al., 2021a), which evaluates lexical-normalization systems on 12 social media datasets in 11 languages. We base our solution on a pre-trained byte-level language model, ByT5 (Xue et al., 2021a), which we further pre-train on synthetic data and then fine-tune on authentic normalization data. Our system achieves the best performance by a wide margin in intrinsic evaluation, and also the best performance in extrinsic evaluation through dependency parsing. The source code is released at https://github.com/ufal/multilexnorm2021 and the fine-tuned models at https://huggingface.co/ufal."
+  },
+  {
+   "id": "2609.09974v1",
+   "title": "Towards Stress-Aware Sentence-Level Filipino G2P With Weakly-Supervised ByT5 Fine-Tuning",
+   "date": "2026-09-09",
+   "authors": [
+    "Lorenz Bernard Marqueses",
+    "Paulo Grane Gabriel Silva",
+    "Chastine Cabatay",
+    "Ericson Adler Tan"
+   ],
+   "n_au": 5,
+   "cat": "cs.CL",
+   "comment": "Accepted at the 10th International Conference on Natural Language Processing and Information Retrieval (NLPIR ",
+   "abs": "Grapheme-to-phoneme conversion (G2P) refers to the task of converting a sequence of graphemes to a corresponding sequence of phonemes. While Filipino G2P is fairly straightforward due to its shallow orthography, the inclusion of prosodic features such as stress adds a layer of complexity that requires sentence-level context instead of single-word inputs. However, sentence-level data for Filipino typically do not include phoneme transcriptions, posing a challenge for training G2P models. As such, we investigate how to obtain sentence-level phoneme data for Filipino using available data and compare the resulting models with multilingual word-level G2P as well as measure how accurately they predict stress marker position for Filipino. We propose fine-tuning a ByT5-based model, pre-trained on multilingual word-level G2P data, on three sentence-level G2P datasets annotated with an LLM-assisted pipeline guided by data from Wiktionary. This approach produces models that perform well on the G2P task, achieving at best around 0.54% PER and 2.50% CER, a significant decrease compared to base model PER at around 19.74%, on a manually-corrected test set. The model is able to correctly classify most of the main stress classes in Filipino, but struggles particularly with malumi words. We show that a ByT5-based model performs well at sentence-level Filipino G2P and offers strong potential for Filipino homograph disambiguation."
+  },
+  {
+   "id": "2105.13626v3",
+   "title": "ByT5: Towards a token-free future with pre-trained byte-to-byte models",
+   "date": "2021-05-28",
+   "authors": [
+    "Linting Xue",
+    "Aditya Barua",
+    "Noah Constant",
+    "Rami Al-Rfou"
+   ],
+   "n_au": 8,
+   "cat": "cs.CL",
+   "comment": "To be published in TACL 2022",
+   "abs": "Most widely-used pre-trained language models operate on sequences of tokens corresponding to word or subword units. By comparison, token-free models that operate directly on raw text (bytes or characters) have many benefits: they can process text in any language out of the box, they are more robust to noise, and they minimize technical debt by removing complex and error-prone text preprocessing pipelines. Since byte or character sequences are longer than token sequences, past work on token-free models has often introduced new model architectures designed to amortize the cost of operating directly on raw text. In this paper, we show that a standard Transformer architecture can be used with minimal modifications to process byte sequences. We characterize the trade-offs in terms of parameter count, training FLOPs, and inference speed, and show that byte-level models are competitive with their token-level counterparts. We also demonstrate that byte-level models are significantly more robust to noise and perform better on tasks that are sensitive to spelling and pronunciation. As part of our contribution, we release a new set of pre-trained byte-level Transformer models based on the T5 architecture, as well as all code and data used in our experiments."
+  },
+  {
+   "id": "2406.10208v2",
+   "title": "Glyph-ByT5-v2: A Strong Aesthetic Baseline for Accurate Multilingual Visual Text Rendering",
+   "date": "2024-06-14",
+   "authors": [
+    "Zeyu Liu",
+    "Weicong Liang",
+    "Yiming Zhao",
+    "Bohan Chen"
+   ],
+   "n_au": 8,
+   "cat": "cs.CV",
+   "comment": "Project page: https://glyph-byt5-v2.github.io/",
+   "abs": "Recently, Glyph-ByT5 has achieved highly accurate visual text rendering performance in graphic design images. However, it still focuses solely on English and performs relatively poorly in terms of visual appeal. In this work, we address these two fundamental limitations by presenting Glyph-ByT5-v2 and Glyph-SDXL-v2, which not only support accurate visual text rendering for 10 different languages but also achieve much better aesthetic quality. To achieve this, we make the following contributions: (i) creating a high-quality multilingual glyph-text and graphic design dataset consisting of more than 1 million glyph-text pairs and 10 million graphic design image-text pairs covering nine other languages, (ii) building a multilingual visual paragraph benchmark consisting of 1,000 prompts, with 100 for each language, to assess multilingual visual spelling accuracy, and (iii) leveraging the latest step-aware preference learning approach to enhance the visual aesthetic quality. With the combination of these techniques, we deliver a powerful customized multilingual text encoder, Glyph-ByT5-v2, and a strong aesthetic graphic generation model, Glyph-SDXL-v2, that can support accurate spelling in 10 different languages. We perceive our work as a significant advancement, considering that the latest DALL-E3 and Ideogram 1.0 still struggle with the multilingual visual text rendering task."
+  },
+  {
+   "id": "2409.13920v1",
+   "title": "One Model is All You Need: ByT5-Sanskrit, a Unified Model for Sanskrit NLP Tasks",
+   "date": "2024-09-20",
+   "authors": [
+    "Sebastian Nehrdich",
+    "Oliver Hellwig",
+    "Kurt Keutzer"
+   ],
+   "n_au": 3,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "Morphologically rich languages are notoriously challenging to process for downstream NLP applications. This paper presents a new pretrained language model, ByT5-Sanskrit, designed for NLP applications involving the morphologically rich language Sanskrit. We evaluate ByT5-Sanskrit on established Sanskrit word segmentation tasks, where it outperforms previous data-driven approaches by a considerable margin and matches the performance of the current best lexicon-based model. It is easier to deploy and more robust to data not covered by external linguistic resources. It also achieves new state-of-the-art results in Vedic Sanskrit dependency parsing and OCR post-correction tasks. Additionally, based on the Digital Corpus of Sanskrit, we introduce a novel multitask dataset for the joint training of Sanskrit word segmentation, lemmatization, and morphosyntactic tagging tasks. We fine-tune ByT5-Sanskrit on this dataset, creating a versatile multitask model for various downstream Sanskrit applications. We have used this model in Sanskrit linguistic annotation projects, in information retrieval setups, and as a preprocessing step in a Sanskrit machine translation pipeline. We also show that our approach yields new best scores for lemmatization and dependency parsing of other morphologically rich languages. We thus demonstrate that byte-level pretrained language models can achieve excellent performance for morphologically rich languages, outperforming tokenizer-based models and presenting an important vector of exploration when constructing NLP pipelines for such languages."
+  }
+ ],
+ "tokenizer transfer / transplantation": [
+  {
+   "id": "2510.21954v2",
+   "title": "Model-Aware Tokenizer Transfer",
+   "date": "2025-10-24",
+   "authors": [
+    "Mykola Haltiuk",
+    "Aleksander Smywinski-Pohl"
+   ],
+   "n_au": 2,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "Large Language Models (LLMs) are trained to support an increasing number of languages, yet their predefined tokenizers remain a bottleneck for adapting models to lower-resource or distinct-script languages. Existing tokenizer transfer methods typically rely on semantic heuristics to initialize new embeddings, ignoring higher-layer model dynamics and limiting transfer quality. We propose Model-Aware Tokenizer Transfer (MATT), a method that incorporates model internals into the tokenizer transfer process. MATT introduces an Attention Influence Modeling (AIM) objective that distills inter-token communication patterns from a source model into a target model with a new tokenizer, providing an efficient warm-up before standard language modeling. Unlike approaches that focus solely on embedding similarity, MATT leverages attention behavior to guide embedding initialization and adaptation. Experiments across diverse linguistic settings show that MATT recovers a large fraction of the original model's performance within a few GPU hours, outperforming heuristic baselines. These results demonstrate that incorporating model-level signals offers a practical and effective path toward robust tokenizer transfer in multilingual LLMs."
+  },
+  {
+   "id": "2405.07883v2",
+   "title": "Zero-Shot Tokenizer Transfer",
+   "date": "2024-05-13",
+   "authors": [
+    "Benjamin Minixhofer",
+    "Edoardo Maria Ponti",
+    "Ivan Vulić"
+   ],
+   "n_au": 3,
+   "cat": "cs.CL",
+   "comment": "NeurIPS 2024",
+   "abs": "Language models (LMs) are bound to their tokenizer, which maps raw text to a sequence of vocabulary items (tokens). This restricts their flexibility: for example, LMs trained primarily on English may still perform well in other natural and programming languages, but have vastly decreased efficiency due to their English-centric tokenizer. To mitigate this, we should be able to swap the original LM tokenizer with an arbitrary one, on the fly, without degrading performance. Hence, in this work we define a new problem: Zero-Shot Tokenizer Transfer (ZeTT). The challenge at the core of ZeTT is finding embeddings for the tokens in the vocabulary of the new tokenizer. Since prior heuristics for initializing embeddings often perform at chance level in a ZeTT setting, we propose a new solution: we train a hypernetwork taking a tokenizer as input and predicting the corresponding embeddings. We empirically demonstrate that the hypernetwork generalizes to new tokenizers both with encoder (e.g., XLM-R) and decoder LLMs (e.g., Mistral-7B). Our method comes close to the original models' performance in cross-lingual and coding tasks while markedly reducing the length of the tokenized sequence. We also find that the remaining gap can be quickly closed by continued training on less than 1B tokens. Finally, we show that a ZeTT hypernetwork trained for a base (L)LM can also be applied to fine-tuned variants without extra training. Overall, our results make substantial strides toward detaching LMs from their tokenizer."
+  },
+  {
+   "id": "2607.04032v1",
+   "title": "Data Structures for Private Token Transfers in TEE-Based Networks",
+   "date": "2026-07-04",
+   "authors": [
+    "Blake Regalia",
+    "Benjamin Adams"
+   ],
+   "n_au": 2,
+   "cat": "cs.CR",
+   "comment": "21 pages, 4 figures",
+   "abs": "Trusted execution environment (TEE) based confidential smart contract networks promise privacy but remain vulnerable to storage access pattern attacks that can link senders and recipients in token transfers. When contracts update recipient balances during transfers, the unique storage keys accessed reveal transaction relationships even when data is encrypted. This paper introduces two novel data structures to address this vulnerability: the Delayed Write Buffer (DWB) and the Bitwise-Trie of Bucketed Entries (BTBE). The DWB delays recipient balance updates by buffering pending transfers and randomly settling entries, breaking the direct correlation between transfer execution and recipient storage access. The BTBE further enhances privacy by grouping addresses into constant-sized buckets, preventing flooding attacks and creating anonymity sets for balance queries. Additionally, we present a private notification system enabling real-time, privacy-preserving push notifications for confidential contracts. Our domain-specific approach leverages the unique characteristics of token transfers -- asymmetric balance updates and tolerance for delayed settlement -- to achieve practical performance with probabilistic anonymity guarantees."
+  },
+  {
+   "id": "2506.06607v1",
+   "title": "Training-Free Tokenizer Transplantation via Orthogonal Matching Pursuit",
+   "date": "2025-06-07",
+   "authors": [
+    "Charles Goddard",
+    "Fernando Fernandes Neto"
+   ],
+   "n_au": 2,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "We present a training-free method to transplant tokenizers in pretrained large language models (LLMs) by reconstructing unseen token embeddings via Orthogonal Matching Pursuit (OMP). Specifically, we approximate each out-of-vocabulary token as a sparse linear combination of shared tokens, in two phases: first, compute each new token's representation in the donor embedding space with a small dictionary of shared anchor tokens, then transfer these same sparse coefficients back into the base model's embedding space.   On two challenging cross-tokenizer tasks--Llama$\\to$Mistral NeMo (12B) and Qwen$\\to$Llama (1B)--we show that OMP achieves best zero-shot preservation of the base model's performance across multiple benchmarks, while other zero-shot approaches degrade significantly. Compared to baselines (zero-init, mean-init, and existing approaches like WECHSEL, FOCUS, ZETT), OMP consistently achieves the best overall performance, effectively bridging large tokenizer discrepancies without gradient updates. Our analysis further identifies mismatched numerical tokenization schemes as a critical challenge for preserving mathematical reasoning capabilities. This technique enables direct reuse of pretrained model weights with new tokenizers, facilitating cross-tokenizer knowledge distillation, speculative decoding, ensembling, merging, and domain-specific vocabulary adaptations. We integrate our method into the open-source mergekit-tokensurgeon tool for post hoc vocabulary realignment."
+  },
+  {
+   "id": "2308.15139v1",
+   "title": "PTTS: Zero-Knowledge Proof-based Private Token Transfer System on Ethereum Blockchain and its Network Flow Based Balance Range Privacy Attack Analysis",
+   "date": "2023-08-29",
+   "authors": [
+    "Goshgar Ismayilov",
+    "Can Ozturan"
+   ],
+   "n_au": 2,
+   "cat": "cs.CR",
+   "comment": "",
+   "abs": "Blockchains are decentralized and immutable databases that are shared among the nodes of the network. Although blockchains have attracted a great scale of attention in the recent years by disrupting the traditional financial systems, the transaction privacy is still a challenging issue that needs to be addressed and analysed. We propose a Private Token Transfer System (PTTS) for the Ethereum public blockchain in the first part of this paper. For the proposed framework, zero-knowledge based protocol has been designed using Zokrates and integrated into our private token smart contract. With the help of web user interface designed, the end users can interact with the smart contract without any third-party setup. In the second part of the paper, we provide security and privacy analysis including the replay attack and the balance range privacy attack which has been modelled as a network flow problem. It is shown that in case some balance ranges are deliberately leaked out to particular organizations or adversial entities, it is possible to extract meaningful information about the user balances by employing minimum cost flow network algorithms that have polynomial complexity. The experimental study reports the Ethereum gas consumption and proof generation times for the proposed framework. It also reports network solution times and goodness rates for a subset of addresses under the balance range privacy attack with respect to number of addresses, number of transactions and ratio of leaked transfer transaction amounts."
+  },
+  {
+   "id": "2503.20083v4",
+   "title": "Universal Cross-Tokenizer Distillation via Approximate Likelihood Matching",
+   "date": "2025-03-25",
+   "authors": [
+    "Benjamin Minixhofer",
+    "Ivan Vulić",
+    "Edoardo Maria Ponti"
+   ],
+   "n_au": 3,
+   "cat": "cs.CL",
+   "comment": "NeurIPS 2025",
+   "abs": "Distillation has shown remarkable success in transferring knowledge from a Large Language Model (LLM) teacher to a student LLM. However, current distillation methods require similar tokenizers between the teacher and the student, restricting their applicability to only a small subset of teacher-student pairs. In this work, we develop a principled cross-tokenizer distillation method to solve this crucial deficiency. Our method is the first to enable effective distillation across fundamentally different tokenizers, while also substantially outperforming prior methods in all other cases. We verify the efficacy of our method on three distinct use cases. First, we show that viewing tokenizer transfer as self-distillation enables unprecedentedly effective transfer across tokenizers, including rapid transfer of subword models to the byte-level. Transferring different models to the same tokenizer also enables ensembling to boost performance. Secondly, we distil a large maths-specialised LLM into a small general-purpose model with a different tokenizer, achieving competitive maths problem-solving performance. Thirdly, we use our method to train state-of-the-art embedding prediction hypernetworks for training-free tokenizer transfer. Our results unlock an expanded range of teacher-student pairs for distillation, enabling new ways to adapt and enhance interaction between LLMs."
+  },
+  {
+   "id": "2607.09598v2",
+   "title": "Tokenizer Transplantation: Mitigating Autoregressive Collapse in Edge-Efficient Bengali ASR",
+   "date": "2026-07-10",
+   "authors": [
+    "Sanjid Hasan",
+    "Md. Abdur Rahman"
+   ],
+   "n_au": 2,
+   "cat": "cs.CL",
+   "comment": "5 pages, 2 figures. Accepted as a poster at the MusIML Workshop, ICML 2026",
+   "abs": "Lightweight speech recognition models are critical for edge deployment, yet highly optimized architectures like Moonshine often fail on morphologically rich, non-Latin languages such as Bengali. This study identifies the root cause of this failure as the model's English-centric byte-level tokenizer, which fragments Bengali words into high-fertility byte chains and triggers catastrophic autoregressive collapse during inference. To resolve this, a novel vocabulary transplantation pipeline is proposed to replace the decoder vocabulary with the native-script BanglaBERT WordPiece vocabulary and resize the corresponding token embedding matrix. Experimental results demonstrate a reduction in token fertility from 9.16 to 1.30. By decreasing autoregressive sequence length by 85.8%, decoding instability is entirely mitigated. When evaluated on the 882-hour Lipi-Ghor dataset, the modified architecture achieves a competitive 21.54% Word Error Rate (WER) and a Real-Time Factor (RTF) of 0.0053. Ultimately, this research provides a scalable, reproducible blueprint for cross-script adaptation of compact ASR models without the need for resource-intensive pre-training."
+  },
+  {
+   "id": "2505.09738v1",
+   "title": "Achieving Tokenizer Flexibility in Language Models through Heuristic Adaptation and Supertoken Learning",
+   "date": "2025-05-14",
+   "authors": [
+    "Shaurya Sharthak",
+    "Vinayak Pahalwan",
+    "Adithya Kamath",
+    "Adarsh Shirawalmath"
+   ],
+   "n_au": 4,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "Pretrained language models (LLMs) are often constrained by their fixed tokenization schemes, leading to inefficiencies and performance limitations, particularly for multilingual or specialized applications. This tokenizer lock-in presents significant challenges. standard methods to overcome this often require prohibitive computational resources. Although tokenizer replacement with heuristic initialization aims to reduce this burden, existing methods often require exhaustive residual fine-tuning and still may not fully preserve semantic nuances or adequately address the underlying compression inefficiencies. Our framework introduces two innovations: first, Tokenadapt, a model-agnostic tokenizer transplantation method, and second, novel pre-tokenization learning for multi-word Supertokens to enhance compression and reduce fragmentation. Tokenadapt initializes new unique token embeddings via a hybrid heuristic that combines two methods: a local estimate based on subword decomposition using the old tokenizer, and a global estimate utilizing the top-k semantically similar tokens from the original vocabulary. This methodology aims to preserve semantics while significantly minimizing retraining requirements. Empirical investigations validate both contributions: the transplantation heuristic successfully initializes unique tokens, markedly outperforming conventional baselines and sophisticated methods including Transtokenizer and ReTok, while our Supertokens achieve notable compression gains. Our zero-shot perplexity results demonstrate that the TokenAdapt hybrid initialization consistently yields lower perplexity ratios compared to both ReTok and TransTokenizer baselines across different base models and newly trained target tokenizers. TokenAdapt typically reduced the overall perplexity ratio significantly compared to ReTok, yielding at least a 2-fold improvement in these aggregate scores."
+  },
+  {
+   "id": "2306.15114v1",
+   "title": "Transfer: Cross Modality Knowledge Transfer using Adversarial Networks -- A Study on Gesture Recognition",
+   "date": "2023-06-26",
+   "authors": [
+    "Payal Kamboj",
+    "Ayan Banerjee",
+    "Sandeep K. S. Gupta"
+   ],
+   "n_au": 3,
+   "cat": "cs.CV",
+   "comment": "",
+   "abs": "Knowledge transfer across sensing technology is a novel concept that has been recently explored in many application domains, including gesture-based human computer interaction. The main aim is to gather semantic or data driven information from a source technology to classify / recognize instances of unseen classes in the target technology. The primary challenge is the significant difference in dimensionality and distribution of feature sets between the source and the target technologies. In this paper, we propose TRANSFER, a generic framework for knowledge transfer between a source and a target technology. TRANSFER uses a language-based representation of a hand gesture, which captures a temporal combination of concepts such as handshape, location, and movement that are semantically related to the meaning of a word. By utilizing a pre-specified syntactic structure and tokenizer, TRANSFER segments a hand gesture into tokens and identifies individual components using a token recognizer. The tokenizer in this language-based recognition system abstracts the low-level technology-specific characteristics to the machine interface, enabling the design of a discriminator that learns technology-invariant features essential for recognition of gestures in both source and target technologies. We demonstrate the usage of TRANSFER for three different scenarios: a) transferring knowledge across technology by learning gesture models from video and recognizing gestures using WiFi, b) transferring knowledge from video to accelerometer, and d) transferring knowledge from accelerometer to WiFi signals."
+  },
+  {
+   "id": "1101.1680v1",
+   "title": "Safe Register Token Transfer in a Ring",
+   "date": "2011-01-09",
+   "authors": [
+    "Ted Herman"
+   ],
+   "n_au": 1,
+   "cat": "cs.DC",
+   "comment": "22 pages",
+   "abs": "A token ring is an arrangement of N processors that take turns engaging in an activity which must be controlled. A token confers the right to engage in the controlled activity. Processors communicate with neighbors in the ring to obtain and release a token. The communication mechanism investigated in this paper is the safe register abstraction, which may arbitrarily corrupt a value that a processor reads when the operation reading a register is concurrent with an write operation on that register by a neighboring processor. The main results are simple protocols for quasi-atomic communication, constructed from safe registers. A quasi-atomic register behaves atomically except that a special undefined value may be returned in the case of concurrent read and write operations. Under certain conditions that constrain the number of writes and registers, quasi-atomic protocols are adequate substitutes for atomic protocols. The paper demonstrates how quasi-atomic protocols can be used to implement a self-stabilizing token ring, either by using two safe registers between neighboring processors or by using O(lg N) safe registers between neighbors, which lowers read complexity."
+  },
+  {
+   "id": "1905.06204v1",
+   "title": "DeXTT: Deterministic Cross-Blockchain Token Transfers",
+   "date": "2019-05-15",
+   "authors": [
+    "Michael Borkowski",
+    "Marten Sigwart",
+    "Philipp Frauenthaler",
+    "Taneli Hukkinen"
+   ],
+   "n_au": 5,
+   "cat": "cs.DC",
+   "comment": "",
+   "abs": "Current blockchain technologies provide very limited interoperability. Restrictions with regards to asset transfers and data exchange between different blockchains reduce usability and comfort for users, and hinder novel developments within the blockchain space.   As a first step towards cross-blockchain interoperability, we propose the DeXTT cross-blockchain transfer protocol, which can be used to transfer a token on any number of blockchains simultaneously in a decentralized manner. We provide a reference implementation using Solidity, and evaluate its performance. We show logarithmic scalability of DeXTT with respect to the number of participating nodes, and analyze cost requirements of the transferred tokens."
+  },
+  {
+   "id": "2209.03907v1",
+   "title": "Trustless Cross-chain Communication for Zendoo Sidechains",
+   "date": "2022-09-08",
+   "authors": [
+    "Alberto Garoffolo",
+    "Dmytro Kaidalov",
+    "Roman Oliynykov"
+   ],
+   "n_au": 3,
+   "cat": "cs.CR",
+   "comment": "",
+   "abs": "In the Zendoo white paper, we introduced a novel sidechain construction for Bitcoin-like blockchains, which allows a mainchain to create and communicate with sidechains of different types without knowing their internal structure. In this paper, we take a step further by introducing a comprehensive method for sidechains to communicate amongst each other. We will also discuss the details of a cross-chain token transfer protocol that extends the generic communication mechanism. With the cross-chain token transfer protocol, it can enable a broad range of new applications, such as an exchange platform, that allows the ability to trade tokens issued from different sidechains."
+  }
+ ],
+ "vocabulary transfer cross-lingual": [
+  {
+   "id": "2508.15807v2",
+   "title": "Vocabulary Expansion of Large Language Models via Kullback-Leibler-Based Self-Distillation",
+   "date": "2025-08-14",
+   "authors": [
+    "Max Rehman Linder"
+   ],
+   "n_au": 1,
+   "cat": "cs.CL",
+   "comment": "Master's Thesis",
+   "abs": "Large pre-trained language models often struggle to incorporate new domain-specific terminology when fine-tuned on small, specialized corpora. In this work, we address the challenge of vocabulary expansion in frozen LLMs by introducing a mathematically grounded method for knowledge distillation via KL divergence, even when the original and extended models use different tokenizations. This allows the student model to inherit distributional knowledge from the teacher despite differing vocabularies. We compare our KL-based distillation approach to conventional cross-entropy training, evaluating both methods across multiple strategies for initializing new token embeddings. After embedding initialization, models are further fine-tuned to integrate the new vocabulary. Each trained model is benchmarked on approximately 2000 code-generation tasks, where our approach achieves the best performance across the board. Finally, through mechanistic interpretability, we analyze how models learn representations for the new tokens, providing an explanation for the observed gains and offering insight into the structure of embedding space during vocabulary expansion."
+  },
+  {
+   "id": "2606.22478v1",
+   "title": "ROMEVA: Geometry-Preserving Vocabulary Expansion for Roman Urdu Language Models",
+   "date": "2026-06-21",
+   "authors": [
+    "Mahnoor Khan",
+    "Afsheen Asif",
+    "Milhan Afzal Khan",
+    "Seemab Latif"
+   ],
+   "n_au": 5,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "Multilingual Language Models like mBERT are widely used for low-resource NLP, yet their adaptation to morphologically inconsistent languages such as Roman Urdu remains underexplored. Roman Urdu spelling variation causes severe sub-word fragmentation, averaging 1.50 sub-words per token. We propose \\textit{ROMEVA} (Roman Urdu Embedding-preserving Vocabulary Adaptation), which combines sub-word-average initialization and a PCA-guided anchor loss to stabilize embeddings during vocabulary expansion. Using a 36,130-comment Roman Urdu corpus, we add 500 highly fragmented tokens to mBERT and compare naive fine-tuning, sub-word-aware fine-tuning, and \\textit{ROMEVA}. While \\textit{ROMEVA} most effectively preserves the pretrained embedding space, naive fine-tuning achieves the strongest downstream sentiment classification performance. These findings reveal a disconnect between embedding stability and downstream performance, suggesting that stronger adaptation may be preferable to strict embedding preservation in morphologically inconsistent languages."
+  },
+  {
+   "id": "2402.14714v1",
+   "title": "Efficient and Effective Vocabulary Expansion Towards Multilingual Large Language Models",
+   "date": "2024-02-22",
+   "authors": [
+    "Seungduk Kim",
+    "Seungtaek Choi",
+    "Myeongho Jeong"
+   ],
+   "n_au": 3,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "This report introduces \\texttt{EEVE-Korean-v1.0}, a Korean adaptation of large language models that exhibit remarkable capabilities across English and Korean text understanding. Building on recent highly capable but English-centric LLMs, such as SOLAR-10.7B and Phi-2, where non-English texts are inefficiently processed with English-centric tokenizers, we present an efficient and effective vocabulary expansion (EEVE) method, which encompasses parameter freezing and subword initialization. In contrast to previous efforts that believe new embeddings require trillions of training tokens, we show that our method can significantly boost non-English proficiency within just 2 billion tokens. Surpassing most instruction-tuned LLMs on the Open Ko-LLM Leaderboard, as of January 2024, our model \\texttt{EEVE-Korean-10.8B-v1.0} ranks as the leading Korean pre-trained model in the open-source community, according to Hugging Face's leaderboard. We open-source our models on Huggingface to empower the open research community in various languages."
+  },
+  {
+   "id": "2604.16656v1",
+   "title": "Defragmenting Language Models: An Interpretability-based Approach for Vocabulary Expansion",
+   "date": "2026-04-17",
+   "authors": [
+    "Maitrey Mehta",
+    "Nishant Subramani",
+    "Zhichao Xu",
+    "Ashim Gupta"
+   ],
+   "n_au": 5,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "All languages are equal; when it comes to tokenization, some are more equal than others. Tokens are the hidden currency that dictate the cost and latency of access to contemporary LLMs. However, many languages written in non-Latin scripts observe a poor exchange rate: LLMs take several multiples of tokens to encode the same information in many languages as they do for English. Our analysis reveals that this issue, known as 'token over-fragmentation', persists in modern open-weight LLMs. The standard remedy is vocabulary expansion that adds target language items missing from the model's vocabulary. In this work, we comprehensively study and advance interpretability-based vocabulary expansion, a new research direction. We focus on two core decisions in the vocabulary expansion process: What items should we add? and How should we initialize their corresponding input and output embeddings? First, we question the conventional use of frequency-based methods to choose candidate vocabulary items to add (a decision long treated as settled), and show that interpretability-based methods offer a superior performance-token efficiency trade-off. Next, we strengthen the case for interpretability-based embedding initialization by showing large gains (~20 pts) over baseline initialization methods for several languages written in non-Latin scripts. We identify the phenomenon of \"subword detokenization\" where models progressively merge fragmented subword tokens into larger subwords across layers. Grounded in our analysis of this phenomenon, we propose FragMend to further push the efficiency ceiling of interpretability-based expansion. We validate the effectiveness of FragMend through comparison against strong baselines and we present extensive analysis of its design choices."
+  },
+  {
+   "id": "2402.09977v1",
+   "title": "Fast Vocabulary Transfer for Language Model Compression",
+   "date": "2024-02-15",
+   "authors": [
+    "Leonidas Gee",
+    "Andrea Zugarini",
+    "Leonardo Rigutini",
+    "Paolo Torroni"
+   ],
+   "n_au": 4,
+   "cat": "cs.CL",
+   "comment": "The 2022 Conference on Empirical Methods in Natural Language Processing (EMNLP 2022)",
+   "abs": "Real-world business applications require a trade-off between language model performance and size. We propose a new method for model compression that relies on vocabulary transfer. We evaluate the method on various vertical domains and downstream tasks. Our results indicate that vocabulary transfer can be effectively used in combination with other compression techniques, yielding a significant reduction in model size and inference time while marginally compromising on performance."
+  },
+  {
+   "id": "2412.12310v2",
+   "title": "Second Language (Arabic) Acquisition of LLMs via Progressive Vocabulary Expansion",
+   "date": "2024-12-16",
+   "authors": [
+    "Jianqing Zhu",
+    "Huang Huang",
+    "Zhihang Lin",
+    "Juhao Liang"
+   ],
+   "n_au": 21,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "This paper addresses the critical need for democratizing large language models (LLM) in the Arab world, a region that has seen slower progress in developing models comparable to state-of-the-art offerings like GPT-4 or ChatGPT 3.5, due to a predominant focus on mainstream languages (e.g., English and Chinese). One practical objective for an Arabic LLM is to utilize an Arabic-specific vocabulary for the tokenizer that could speed up decoding. However, using a different vocabulary often leads to a degradation of learned knowledge since many words are initially out-of-vocabulary (OOV) when training starts. Inspired by the vocabulary learning during Second Language (Arabic) Acquisition for humans, the released AraLLaMA employs progressive vocabulary expansion, which is implemented by a modified BPE algorithm that progressively extends the Arabic subwords in its dynamic vocabulary during training, thereby balancing the OOV ratio at every stage. The ablation study demonstrated the effectiveness of Progressive Vocabulary Expansion. Moreover, AraLLaMA achieves decent performance comparable to the best Arabic LLMs across a variety of Arabic benchmarks. Models, training data, benchmarks, and codes will be all open-sourced."
+  },
+  {
+   "id": "2112.14569v2",
+   "title": "Fine-Tuning Transformers: Vocabulary Transfer",
+   "date": "2021-12-29",
+   "authors": [
+    "Vladislav Mosin",
+    "Igor Samenko",
+    "Alexey Tikhonov",
+    "Borislav Kozlovskii"
+   ],
+   "n_au": 5,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "Transformers are responsible for the vast majority of recent advances in natural language processing. The majority of practical natural language processing applications of these models are typically enabled through transfer learning. This paper studies if corpus-specific tokenization used for fine-tuning improves the resulting performance of the model. Through a series of experiments, we demonstrate that such tokenization combined with the initialization and fine-tuning strategy for the vocabulary tokens speeds up the transfer and boosts the performance of the fine-tuned model. We call this aspect of transfer facilitation vocabulary transfer."
+  },
+  {
+   "id": "2506.01535v1",
+   "title": "Dictionaries to the Rescue: Cross-Lingual Vocabulary Transfer for Low-Resource Languages Using Bilingual Dictionaries",
+   "date": "2025-06-02",
+   "authors": [
+    "Haruki Sakajo",
+    "Yusuke Ide",
+    "Justin Vasselli",
+    "Yusuke Sakai"
+   ],
+   "n_au": 7,
+   "cat": "cs.CL",
+   "comment": "Accepted to ACL 2025 Findings",
+   "abs": "Cross-lingual vocabulary transfer plays a promising role in adapting pre-trained language models to new languages, including low-resource languages. Existing approaches that utilize monolingual or parallel corpora face challenges when applied to languages with limited resources. In this work, we propose a simple yet effective vocabulary transfer method that utilizes bilingual dictionaries, which are available for many languages, thanks to descriptive linguists. Our proposed method leverages a property of BPE tokenizers where removing a subword from the vocabulary causes a fallback to shorter subwords. The embeddings of target subwords are estimated iteratively by progressively removing them from the tokenizer. The experimental results show that our approach outperforms existing methods for low-resource languages, demonstrating the effectiveness of a dictionary-based approach for cross-lingual vocabulary transfer."
+  },
+  {
+   "id": "2506.19993v1",
+   "title": "CoVE: Compressed Vocabulary Expansion Makes Better LLM-based Recommender Systems",
+   "date": "2025-06-24",
+   "authors": [
+    "Haochen Zhang",
+    "Tianyi Zhang",
+    "Junze Yin",
+    "Oren Gal"
+   ],
+   "n_au": 6,
+   "cat": "cs.IR",
+   "comment": "Accepted by ACL 2025 Findings",
+   "abs": "Recommender systems play a pivotal role in providing relevant content to users. With the rapid development of large language models (LLMs), researchers have begun utilizing LLMs to build more powerful recommender systems. However, existing approaches that focus on aligning LLMs with recommendation tasks do not fully leverage their sequential information processing capabilities, leading to suboptimal performance.   In this paper, we propose a novel system called compressed vocabulary expansion (CoVE). In CoVE, each item is assigned a unique ID within the expanded vocabulary. Our framework effectively capitalizes on sequence understanding abilities of LLMs, significantly enhancing their performance on recommendation tasks. Additionally, we compress the embedding layer, making CoVE practical for large-scale industrial applications. The effectiveness and performance of CoVE are demonstrated through comprehensive experiments on multiple recommendation datasets and comparisons with prior works. Our code can be found at https://github.com/HaochenZhang717/CoVE-official-Repo."
+  },
+  {
+   "id": "2410.01188v1",
+   "title": "Gold Panning in Vocabulary: An Adaptive Method for Vocabulary Expansion of Domain-Specific LLMs",
+   "date": "2024-10-02",
+   "authors": [
+    "Chengyuan Liu",
+    "Shihang Wang",
+    "Lizhi Qing",
+    "Kun Kuang"
+   ],
+   "n_au": 7,
+   "cat": "cs.CL",
+   "comment": "Accepted by EMNLP 2024",
+   "abs": "While Large Language Models (LLMs) demonstrate impressive generation abilities, they frequently struggle when it comes to specialized domains due to their limited domain-specific knowledge. Studies on domain-specific LLMs resort to expanding the vocabulary before fine-tuning on domain-specific corpus, aiming to decrease the sequence length and enhance efficiency during decoding, without thoroughly investigating the results of vocabulary expansion to LLMs over different domains. Our pilot study reveals that expansion with only a subset of the entire vocabulary may lead to superior performance. Guided by the discovery, this paper explores how to identify a vocabulary subset to achieve the optimal results. We introduce VEGAD, an adaptive method that automatically identifies valuable words from a given domain vocabulary. Our method has been validated through experiments on three Chinese datasets, demonstrating its effectiveness. Additionally, we have undertaken comprehensive analyses of the method. The selection of a optimal subset for expansion has shown to enhance performance on both domain-specific tasks and general tasks, showcasing the potential of VEGAD."
+  },
+  {
+   "id": "2208.02554v3",
+   "title": "Vocabulary Transfer for Biomedical Texts: Add Tokens if You Can Not Add Data",
+   "date": "2022-08-04",
+   "authors": [
+    "Priyanka Singh",
+    "Vladislav D. Mosin",
+    "Ivan P. Yamshchikov"
+   ],
+   "n_au": 3,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "Working within specific NLP subdomains presents significant challenges, primarily due to a persistent deficit of data. Stringent privacy concerns and limited data accessibility often drive this shortage. Additionally, the medical domain demands high accuracy, where even marginal improvements in model performance can have profound impacts. In this study, we investigate the potential of vocabulary transfer to enhance model performance in biomedical NLP tasks. Specifically, we focus on vocabulary extension, a technique that involves expanding the target vocabulary to incorporate domain-specific biomedical terms. Our findings demonstrate that vocabulary extension, leads to measurable improvements in both downstream model performance and inference time."
+  },
+  {
+   "id": "2408.04303v1",
+   "title": "Trans-Tokenization and Cross-lingual Vocabulary Transfers: Language Adaptation of LLMs for Low-Resource NLP",
+   "date": "2024-08-08",
+   "authors": [
+    "François Remy",
+    "Pieter Delobelle",
+    "Hayastan Avetisyan",
+    "Alfiya Khabibullina"
+   ],
+   "n_au": 6,
+   "cat": "cs.CL",
+   "comment": "Accepted at COLM 2024",
+   "abs": "The development of monolingual language models for low and mid-resource languages continues to be hindered by the difficulty in sourcing high-quality training data. In this study, we present a novel cross-lingual vocabulary transfer strategy, trans-tokenization, designed to tackle this challenge and enable more efficient language adaptation. Our approach focuses on adapting a high-resource monolingual LLM to an unseen target language by initializing the token embeddings of the target language using a weighted average of semantically similar token embeddings from the source language. For this, we leverage a translation resource covering both the source and target languages. We validate our method with the Tweeties, a series of trans-tokenized LLMs, and demonstrate their competitive performance on various downstream tasks across a small but diverse set of languages. Additionally, we introduce Hydra LLMs, models with multiple swappable language modeling heads and embedding tables, which further extend the capabilities of our trans-tokenization strategy. By designing a Hydra LLM based on the multilingual model TowerInstruct, we developed a state-of-the-art machine translation model for Tatar, in a zero-shot manner, completely bypassing the need for high-quality parallel data. This breakthrough is particularly significant for low-resource languages like Tatar, where high-quality parallel data is hard to come by. By lowering the data and time requirements for training high-quality models, our trans-tokenization strategy allows for the development of LLMs for a wider range of languages, especially those with limited resources. We hope that our work will inspire further research and collaboration in the field of cross-lingual vocabulary transfer and contribute to the empowerment of languages on a global scale."
+  }
+ ],
+ "tokenizer quality downstream": [
+  {
+   "id": "2608.18062v3",
+   "title": "TokEval: A Tokenizer Evaluation Suite",
+   "date": "2026-08-18",
+   "authors": [
+    "Clara Meister"
+   ],
+   "n_au": 1,
+   "cat": "cs.CL",
+   "comment": "Published as a conference paper at COLM 2026; Library hosted at https://github.com/cimeister/tokenizer-intrins",
+   "abs": "Language model tokenizers are typically selected with minimal evaluation, despite the fact that their design choices directly impact model capabilities. This can be partly attributed to a limited understanding of which tokenizer properties affect which aspects of downstream performance. We introduce TokEval, a framework of tokenizer evaluation metrics that goes beyond standard measures like fertility and compression rate to capture linguistically and structurally meaningful properties, e.g., UTF-8 character boundary integrity and digit place-value boundary alignment for mathematics. To validate whether these metrics are predictive of downstream model performance, we conduct controlled language model pretraining experiments, varying solely the tokenizers' training data mixture, pretokenization strategy, and training algorithm. We evaluate the resulting models on bits-per-byte (a tokenizer-agnostic version of perplexity) and several benchmarks, spanning linguistic understanding, mathematical reasoning, and code generation. Our experiments suggest that different intrinsic properties have different impacts on model abilities: information-theoretic metrics predict language modeling abilities (Spearman rho up to 0.80), while structure-sensitive metrics, such as those measuring digit and line-break handling, correlate with task accuracy. We hope TokEval enables more principled tokenizer evaluation, replacing pretraining sweeps with intrinsic measurement wherever the two agree."
+  },
+  {
+   "id": "2511.20849v2",
+   "title": "Length-MAX Tokenizer for Language Models",
+   "date": "2025-11-25",
+   "authors": [
+    "Dong Dong",
+    "Weijie Su"
+   ],
+   "n_au": 2,
+   "cat": "cs.CL",
+   "comment": "Accepted at Transactions on Machine Learning Research (TMLR). OpenReview: https://openreview.net/forum?id=CRjr",
+   "abs": "We introduce a new tokenizer for language models that minimizes the average tokens per character, thereby reducing the number of tokens needed to represent text during training and to generate text during inference. Our method, which we refer to as the Length-MAX tokenizer, obtains its vocabulary by casting a length-weighted objective maximization as a graph partitioning problem and developing a greedy approximation algorithm. On FineWeb and diverse domains, it yields 14--18\\% fewer tokens than Byte Pair Encoding (BPE) across vocabulary sizes from 10K to 50K, and the reduction is 13.0\\% when the size is 64K. Training GPT-2 models at 124M, 355M, and 1.3B parameters from scratch with five runs each shows 18.5\\%, 17.2\\%, and 18.5\\% fewer steps, respectively, to reach a fixed validation loss, and 13.7\\%, 12.7\\%, and 13.7\\% lower inference latency, together with a 16\\% throughput gain at 124M, while consistently improving on downstream tasks including reducing LAMBADA perplexity by 11.7\\% and enhancing HellaSwag accuracy by 4.3\\%. Moreover, the Length-MAX tokenizer achieves 99.62\\% vocabulary coverage and the out-of-vocabulary rate remains low at 0.12\\% on test sets. These results demonstrate that optimizing for average token length, rather than frequency alone, offers an effective approach to more efficient language modeling without sacrificing -- and often improving -- downstream performance. The tokenizer is compatible with production systems and reduces embedding and KV-cache memory by 18\\% at inference."
+  },
+  {
+   "id": "2012.15613v2",
+   "title": "How Good is Your Tokenizer? On the Monolingual Performance of Multilingual Language Models",
+   "date": "2020-12-31",
+   "authors": [
+    "Phillip Rust",
+    "Jonas Pfeiffer",
+    "Ivan Vulić",
+    "Sebastian Ruder"
+   ],
+   "n_au": 5,
+   "cat": "cs.CL",
+   "comment": "ACL 2021",
+   "abs": "In this work, we provide a systematic and comprehensive empirical comparison of pretrained multilingual language models versus their monolingual counterparts with regard to their monolingual task performance. We study a set of nine typologically diverse languages with readily available pretrained monolingual models on a set of five diverse monolingual downstream tasks. We first aim to establish, via fair and controlled comparisons, if a gap between the multilingual and the corresponding monolingual representation of that language exists, and subsequently investigate the reason for any performance difference. To disentangle conflating factors, we train new monolingual models on the same data, with monolingually and multilingually trained tokenizers. We find that while the pretraining data size is an important factor, a designated monolingual tokenizer plays an equally important role in the downstream performance. Our results show that languages that are adequately represented in the multilingual model's vocabulary exhibit negligible performance decreases over their monolingual counterparts. We further find that replacing the original multilingual tokenizer with the specialized monolingual tokenizer improves the downstream performance of the multilingual model for almost every task and language."
+  },
+  {
+   "id": "2212.07284v1",
+   "title": "MANTa: Efficient Gradient-Based Tokenization for Robust End-to-End Language Modeling",
+   "date": "2022-12-14",
+   "authors": [
+    "Nathan Godey",
+    "Roman Castagné",
+    "Éric de la Clergerie",
+    "Benoît Sagot"
+   ],
+   "n_au": 4,
+   "cat": "cs.CL",
+   "comment": "EMNLP 2022 Findings (https://aclanthology.org/2022.findings-emnlp.207/)",
+   "abs": "Static subword tokenization algorithms have been an essential component of recent works on language modeling. However, their static nature results in important flaws that degrade the models' downstream performance and robustness. In this work, we propose MANTa, a Module for Adaptive Neural TokenizAtion. MANTa is a differentiable tokenizer trained end-to-end with the language model. The resulting system offers a trade-off between the expressiveness of byte-level models and the speed of models trained using subword tokenization. In addition, our tokenizer is highly explainable since it produces an explicit segmentation of sequences into blocks. We evaluate our pre-trained model on several English datasets from different domains as well as on synthetic noise. We find that MANTa improves robustness to character perturbations and out-of-domain data. We then show that MANTa performs comparably to other models on the general-domain GLUE benchmark. Finally, we show that it is considerably faster than strictly byte-level models."
+  },
+  {
+   "id": "2101.09635v2",
+   "title": "WangchanBERTa: Pretraining transformer-based Thai Language Models",
+   "date": "2021-01-24",
+   "authors": [
+    "Lalita Lowphansirikul",
+    "Charin Polpanumas",
+    "Nawat Jantrakulchai",
+    "Sarana Nutanong"
+   ],
+   "n_au": 4,
+   "cat": "cs.CL",
+   "comment": "24 pages, edited the citation of the syllable-level tokenizer from [Chormai et al., 2020] to [Phatthiyaphaibun",
+   "abs": "Transformer-based language models, more specifically BERT-based architectures have achieved state-of-the-art performance in many downstream tasks. However, for a relatively low-resource language such as Thai, the choices of models are limited to training a BERT-based model based on a much smaller dataset or finetuning multi-lingual models, both of which yield suboptimal downstream performance. Moreover, large-scale multi-lingual pretraining does not take into account language-specific features for Thai. To overcome these limitations, we pretrain a language model based on RoBERTa-base architecture on a large, deduplicated, cleaned training set (78GB in total size), curated from diverse domains of social media posts, news articles and other publicly available datasets. We apply text processing rules that are specific to Thai most importantly preserving spaces, which are important chunk and sentence boundaries in Thai before subword tokenization. We also experiment with word-level, syllable-level and SentencePiece tokenization with a smaller dataset to explore the effects on tokenization on downstream performance. Our model wangchanberta-base-att-spm-uncased trained on the 78.5GB dataset outperforms strong baselines (NBSVM, CRF and ULMFit) and multi-lingual models (XLMR and mBERT) on both sequence classification and token classification tasks in human-annotated, mono-lingual contexts."
+  },
+  {
+   "id": "2310.08754v4",
+   "title": "Tokenizer Choice For LLM Training: Negligible or Crucial?",
+   "date": "2023-10-12",
+   "authors": [
+    "Mehdi Ali",
+    "Michael Fromm",
+    "Klaudia Thellmann",
+    "Richard Rutmann"
+   ],
+   "n_au": 21,
+   "cat": "cs.LG",
+   "comment": "",
+   "abs": "The recent success of Large Language Models (LLMs) has been predominantly driven by curating the training dataset composition, scaling of model architectures and dataset sizes and advancements in pretraining objectives, leaving tokenizer influence as a blind spot. Shedding light on this underexplored area, we conduct a comprehensive study on the influence of tokenizer choice on LLM downstream performance by training 24 mono- and multilingual LLMs at a 2.6B parameter scale, ablating different tokenizer algorithms and parameterizations. Our studies highlight that the tokenizer choice can significantly impact the model's downstream performance and training costs. In particular, we find that the common tokenizer evaluation metrics fertility and parity are not always predictive of model downstream performance, rendering these metrics a questionable proxy for the model's downstream performance. Furthermore, we show that multilingual tokenizers trained on the five most frequent European languages require vocabulary size increases of factor three in comparison to English. While English-centric tokenizers have been applied to the training of multi-lingual LLMs in the past, we find that this approach results in a severe downstream performance degradation and additional training costs of up to 68%, due to an inefficient tokenization vocabulary."
+  },
+  {
+   "id": "2506.03101v1",
+   "title": "Beyond Text Compression: Evaluating Tokenizers Across Scales",
+   "date": "2025-06-03",
+   "authors": [
+    "Jonas F. Lotz",
+    "António V. Lopes",
+    "Stephan Peitz",
+    "Hendra Setiawan"
+   ],
+   "n_au": 5,
+   "cat": "cs.CL",
+   "comment": "ACL 2025",
+   "abs": "The choice of tokenizer can profoundly impact language model performance, yet accessible and reliable evaluations of tokenizer quality remain an open challenge. Inspired by scaling consistency, we show that smaller models can accurately predict significant differences in tokenizer impact on larger models at a fraction of the compute cost. By systematically evaluating both English-centric and multilingual tokenizers, we find that tokenizer choice has negligible effects on tasks in English but results in consistent performance differences in multilingual settings. We propose new intrinsic tokenizer metrics inspired by Zipf's law that correlate more strongly with downstream performance than text compression when modeling unseen languages. By combining several metrics to capture multiple aspects of tokenizer behavior, we develop a reliable framework for intrinsic tokenizer evaluations. Our work offers a more efficient path to informed tokenizer selection in future language model development."
+  },
+  {
+   "id": "2608.17325v1",
+   "title": "What Tokens are Learned when Tokenization is Optimized Jointly with Language Modeling?",
+   "date": "2026-08-18",
+   "authors": [
+    "Saketh Reddy Vemula",
+    "Parameswari Krishnamurthy"
+   ],
+   "n_au": 2,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "Tokenization is a fundamental component of language modeling pipelines. Despite its importance, it is often fixed, even though it significantly impacts model performance across languages. In this work, we analyze what tokens are learned when tokenization is jointly optimized with language modeling. We compare tokenizer-free approaches such as SSLMs and H-Nets with fixed tokenizers across 18 typologically and script-diverse languages. Our results show that joint optimization fundamentally alters token structure. SSLMs recover morphologically aligned and contextually efficient tokens, whereas H-Nets prioritize byte-level efficiency, producing longer tokens with very low overlap with standard subword vocabularies. We further show that tokenization behavior varies across language typologies. Agglutinative languages exhibit more dynamic segmentation patterns while learning. Through downstream evaluation, with pretrained-then-finetuned BERT models, we find that SSLM-based pretokenization consistently reduces language modeling perplexity and achieves competitive downstream performance despite distinct vocabularies. Overall, tokenizer-free approaches optimize for contextual and computational efficiency rather than strict morphological structure, resulting in fundamentally different yet effective vocabularies for downstream NLP."
+  },
+  {
+   "id": "2507.07824v1",
+   "title": "Conditional Unigram Tokenization with Parallel Data",
+   "date": "2025-07-10",
+   "authors": [
+    "Gianluca Vico",
+    "Jindřinch Libovický"
+   ],
+   "n_au": 2,
+   "cat": "cs.CL",
+   "comment": "21 pages, 4 figures, submitted to Tokenization Workshop (TokShop) at ICML 2025",
+   "abs": "We introduce conditional unigram tokenization, a novel approach that extends unigram tokenization by conditioning target token probabilities on source-language tokens from parallel data. Given a fixed source tokenizer, our method learns a target tokenizer that maximizes cross-lingual semantic alignment. We evaluate our tokenizer on four language pairs across different families and resource levels, examining intrinsic properties and downstream performance on machine translation and language modeling. While our conditional tokenizer maintains comparable statistical properties to standard unigram tokenizers, results are mixed: we observe no improvements in machine translation quality, but find consistent perplexity reductions in language modeling. We hypothesize that quadratic scaling of conditional probability estimation with respect to the vocabulary size creates a data efficiency bottleneck. Our findings suggest that alternative parameterizations may be necessary for practical cross-lingual tokenization."
+  },
+  {
+   "id": "2409.04599v1",
+   "title": "BPE Gets Picky: Efficient Vocabulary Refinement During Tokenizer Training",
+   "date": "2024-09-06",
+   "authors": [
+    "Pavel Chizhov",
+    "Catherine Arnett",
+    "Elizaveta Korotkova",
+    "Ivan P. Yamshchikov"
+   ],
+   "n_au": 4,
+   "cat": "cs.CL",
+   "comment": "9 pages",
+   "abs": "Language models can largely benefit from efficient tokenization. However, they still mostly utilize the classical BPE algorithm, a simple and reliable method. This has been shown to cause such issues as under-trained tokens and sub-optimal compression that may affect the downstream performance. We introduce Picky BPE, a modified BPE algorithm that carries out vocabulary refinement during tokenizer training. Our method improves vocabulary efficiency, eliminates under-trained tokens, and does not compromise text compression. Our experiments show that our method does not reduce the downstream performance, and in several cases improves it."
+  },
+  {
+   "id": "2306.09572v1",
+   "title": "How do different tokenizers perform on downstream tasks in scriptio continua languages?: A case study in Japanese",
+   "date": "2023-06-16",
+   "authors": [
+    "Takuro Fujii",
+    "Koki Shibata",
+    "Atsuki Yamaguchi",
+    "Terufumi Morishita"
+   ],
+   "n_au": 5,
+   "cat": "cs.CL",
+   "comment": "Accepted at ACL SRW 2023",
+   "abs": "This paper investigates the effect of tokenizers on the downstream performance of pretrained language models (PLMs) in scriptio continua languages where no explicit spaces exist between words, using Japanese as a case study. The tokenizer for such languages often consists of a morphological analyzer and a subword tokenizer, requiring us to conduct a comprehensive study of all possible pairs. However, previous studies lack this comprehensiveness. We therefore train extensive sets of tokenizers, build a PLM using each, and measure the downstream performance on a wide range of tasks. Our results demonstrate that each downstream task has a different optimal morphological analyzer, and that it is better to use Byte-Pair-Encoding or Unigram rather than WordPiece as a subword tokenizer, regardless of the type of task."
+  },
+  {
+   "id": "2506.15138v2",
+   "title": "Less Is More: Reducing Token Counts Without Compromising Performance",
+   "date": "2025-06-18",
+   "authors": [
+    "Gyeongje Cho",
+    "Yeonkyoung So",
+    "Sangmin Lee",
+    "Jaejin Lee"
+   ],
+   "n_au": 4,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "Tokenization directly affects the inference efficiency of large language models, since fragmented tokenization increases sequence length and generation cost. Although longer, multi-word tokens can reduce fertility, naively adding them often degrades language model performance. We propose Thunder-Tok, a subword tokenizer that reduces fertility while preserving downstream performance. Thunder-Tok first constructs a large seed vocabulary from corpus substrings and filters structurally incomplete candidates, including invalid Unicode byte fragments and word-boundary violations. It then prunes the seed vocabulary using a likelihood-based token score derived from a uniform Jensen lower bound of the training-data probability. Experiments show that Thunder-Tok reduces fertility by approximately 25% in English and 9% in Korean compared with the standard BPE tokenizer while maintaining competitive performance."
+  }
+ ],
+ "byte-level BPE vs subword": [
+  {
+   "id": "2101.09469v2",
+   "title": "Training Multilingual Pre-trained Language Model with Byte-level Subwords",
+   "date": "2021-01-23",
+   "authors": [
+    "Junqiu Wei",
+    "Qun Liu",
+    "Yinpeng Guo",
+    "Xin Jiang"
+   ],
+   "n_au": 4,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "The pre-trained language models have achieved great successes in various natural language understanding (NLU) tasks due to its capacity to capture the deep contextualized information in text by pre-training on large-scale corpora. One of the fundamental components in pre-trained language models is the vocabulary, especially for training multilingual models on many different languages. In the technical report, we present our practices on training multilingual pre-trained language models with BBPE: Byte-Level BPE (i.e., Byte Pair Encoding). In the experiment, we adopted the architecture of NEZHA as the underlying pre-trained language model and the results show that NEZHA trained with byte-level subwords consistently outperforms Google multilingual BERT and vanilla NEZHA by a notable margin in several multilingual NLU tasks. We release the source code of our byte-level vocabulary building tools and the multilingual pre-trained language models."
+  },
+  {
+   "id": "2603.02597v1",
+   "title": "GPUTOK: GPU Accelerated Byte Level BPE Tokenization",
+   "date": "2026-03-03",
+   "authors": [
+    "Venu Gopal Kadamba",
+    "Kanishkha Jaisankar"
+   ],
+   "n_au": 2,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "As large language models move toward million-token context windows, CPU tokenizers become a major slowdown because they process text one step at a time while powerful GPUs sit unused. We built a GPU-based byte-level BPE tokenizer that follows GPT-2's merge rules. It includes a basic BlockBPE-style kernel and a faster, optimized version that uses cuCollections static map, CUB reductions, and a pybind11 interface for Python.   On WikiText103 sequences up to 131k tokens, the optimized GPU tokenizer produces the same tokens as a CPU version and, for the longest inputs, is about 1.7x faster than tiktoken and about 7.6x faster than the HuggingFace GPT-2 tokenizer. Nsight profiling shows that 70-80% of CUDA API time goes to memory allocation, so adding memory pooling should give the biggest speed boost next. Tests on generation tasks using WikiText103 prompts show that our GPU tokenizer's outputs stay within about one percentage point of tiktoken and HuggingFace GPT-2 on similarity and overlap metrics, meaning it keeps output quality while making long-context inference more practical."
+  },
+  {
+   "id": "2605.29459v1",
+   "title": "Kronecker Embeddings: Byte-Level Structured Token Representations for Parameter-Efficient Language Models",
+   "date": "2026-05-28",
+   "authors": [
+    "Rohan Shravan"
+   ],
+   "n_au": 1,
+   "cat": "cs.CL",
+   "comment": "28 pages, 16 tables. Reference implementation: https://github.com/theschoolofai/kronecker-embeddings",
+   "abs": "Large language models route every input through a learned embedding table of shape |V| x d_model, consuming hundreds of millions to billions of trainable parameters at frontier scale. We introduce Kronecker Embeddings, a deterministic byte-level character-position factorization that replaces this table with a fixed encoder and a single learned projection, compatible with standard BPE tokenizers, eliminating 91--94% of input-side trainable parameters at frontier scale. We provide five contributions. First, a cross-model probe across six LMs (135M-671B parameters) shows trained input embeddings cluster typographic variants of the probe word far more than morphological relatives; Kronecker escapes this clustering at the embedding layer. Second, a controlled three-seed comparison on nanoGPT GPT-2 124M over 2.5B tokens of FineWeb-Edu shows Kronecker reaching 2.5 +- 0.2% lower validation loss than the BPE-tied baseline (gap 0.083 +- 0.007 nats, ~9% lower perplexity), needing ~1.43x fewer steps to reach BPE's converged loss. Third, a spelling-robustness probe over 110 clean/typo pairs shows Kronecker preserves the top-1 prediction on 55.5% of pairs vs. 47.3% for BPE (+8.2 pp) and lowers KL by 7.6%, winning or tying in 10 of 11 categories; a generation probe shows Kronecker echoes byte-novel strings and typos through generation where BPE forgets them. Fourth, BPE embedding norm drifts during training while Kronecker projection norm stays near 1.0, consistent with a stable representational target. Fifth, an on-the-fly runtime variant reconstructs embeddings from a 4.5 MB byte buffer rather than a 2.15 GB table at vocabulary 131,072, with 0.01--0.24% step-time overhead. Byte-level locality has a tradeoff: byte-similar but semantically distant pairs (compute/commute, nation/notion) cluster together, shifting disambiguation to early attention layers."
+  },
+  {
+   "id": "2505.17102v1",
+   "title": "BanglaByT5: Byte-Level Modelling for Bangla",
+   "date": "2025-05-21",
+   "authors": [
+    "Pramit Bhattacharyya",
+    "Arnab Bhattacharya"
+   ],
+   "n_au": 2,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "Large language models (LLMs) have achieved remarkable success across various natural language processing tasks. However, most LLM models use traditional tokenizers like BPE and SentencePiece, which fail to capture the finer nuances of a morphologically rich language like Bangla (Bengali). In this work, we introduce BanglaByT5, the first byte-level encoder-decoder model explicitly tailored for Bangla. Built upon a small variant of Googles ByT5 architecture, BanglaByT5 is pre-trained on a 14GB curated corpus combining high-quality literary and newspaper articles. Through zeroshot and supervised evaluations across generative and classification tasks, BanglaByT5 demonstrates competitive performance, surpassing several multilingual and larger models. Our findings highlight the efficacy of byte-level modelling for morphologically rich languages and highlight BanglaByT5 potential as a lightweight yet powerful tool for Bangla NLP, particularly in both resource-constrained and scalable environments."
+  },
+  {
+   "id": "2410.23684v2",
+   "title": "Improbable Bigrams Expose Vulnerabilities of Incomplete Tokens in Byte-Level Tokenizers",
+   "date": "2024-10-31",
+   "authors": [
+    "Eugene Jang",
+    "Kimin Lee",
+    "Jin-Woo Chung",
+    "Keuntae Park"
+   ],
+   "n_au": 5,
+   "cat": "cs.CL",
+   "comment": "EMNLP 2025 Main",
+   "abs": "Tokenization is a crucial step that bridges human-readable text with model-readable discrete tokens. However, recent studies have revealed that tokenizers can be exploited to elicit unwanted model behaviors. In this work, we investigate incomplete tokens, i.e., undecodable tokens with stray bytes resulting from byte-level byte-pair encoding (BPE) tokenization. We hypothesize that such tokens are heavily reliant on their adjacent tokens and are fragile when paired with unfamiliar tokens. To demonstrate this vulnerability, we introduce improbable bigrams: out-of-distribution combinations of incomplete tokens designed to exploit their dependency. Our experiments show that improbable bigrams are significantly prone to hallucinatory behaviors. Surprisingly, the same phrases have drastically lower rates of hallucination (90% reduction in Llama3.1) when an alternative tokenization is used. We caution against the potential vulnerabilities introduced by byte-level BPE tokenizers, which may introduce blind spots to language models."
+  },
+  {
+   "id": "2511.17573v1",
+   "title": "Binary BPE: A Family of Cross-Platform Tokenizers for Binary Analysis",
+   "date": "2025-11-14",
+   "authors": [
+    "Michael J. Bommarito"
+   ],
+   "n_au": 1,
+   "cat": "cs.LG",
+   "comment": "17 pages, 3 figures, 9 tables. Paper source available at https://github.com/mjbommar/binary-tokenizer-paper ; ",
+   "abs": "Sequence models for binary analysis are bottlenecked by byte-level tokenization: raw bytes waste precious context window capacity for transformers and other neural network architectures, and many existing text-oriented tokenizers fail on arbitrary 0x00--0xFF sequences. To address this issue, we introduce the Binary BPE tokenizer family, a set of cross-platform Byte Pair Encoding (BPE) tokenizers for executables trained on a large corpus of binaries spanning multiple platforms, architectures, and operating systems, including Linux, Windows, macOS, Android, and malware sources. We release trained tokenizers with vocabularies of 4K, 8K, 16K, 32K, and 64K tokens, enabling both systematic scaling studies and practical deployment from resource-constrained edge devices to high-throughput datacenters. These tokenizers discover interpretable patterns (ELF/PE headers, instruction sequences, cross-platform strings) while yielding multi-byte compression per token. On representative uncompressed executables (e.g., ELF/PE/Mach-O rather than compressed APKs), the Binary BPE tokenizers typically allow for roughly 2-3x more binary content per fixed-length transformer context window than raw bytes, enabling more efficient research and practical deployment for content identification, malware detection, reverse engineering, and optimization. We release the trained Binary BPE tokenizers on HuggingFace, providing a drop-in, open-source foundation for binary-focused language models and context-efficient agentic tools."
+  },
+  {
+   "id": "2608.28151v1",
+   "title": "Nested Byte-Level Vocabularies Are Cheap to Deploy and Expensive to Share: A Pre-Registered Negative Result",
+   "date": "2026-08-28",
+   "authors": [
+    "Christos Koutsiaris"
+   ],
+   "n_au": 1,
+   "cat": "cs.CL",
+   "comment": "5 pages, 2 figures, 4 tables. Pre-registered study. Code and reproducibility materials: https://github.com/uns",
+   "abs": "A byte-level BPE tokenizer is an ordered list of merge rules, so applying only a prefix yields a vocabulary whose token identifiers are the first rows of the full vocabulary. This prefix nesting allows one language model to operate at several vocabulary sizes, use a control token to indicate the active size, and be deployed at any trained size by slicing its embedding and output head. We pre-registered five claims, including margins, seeds, contrasts, and a stop rule, and trained 30 models with 3.1M- and 10.6M-parameter bodies on 200M tokens each. Slicing is numerically exact: across 76 checks, a sliced model reproduces the restricted full model's logits bit for bit and removes 66% of deployed weights without changing latency. However, the shared model trails a fixed-cap specialist by 3.64% bits per byte at 32k against a 1% margin, and by 2.96% at 8k against a 2% margin. A 2x2 ablation separating the control token from output restriction finds that the token changes performance by +0.07% to +0.13%, with all intervals crossing zero, while output restriction costs +0.47% to +1.19%; the factors are substitutes rather than complements. Multi-cap training nevertheless improves robustness: under typographical noise, the same checkpoint degrades 12.5--15.4 points less in its fine mode and outperforms each fixed-cap specialist at that specialist's vocabulary size. A control with neither cap token nor output restriction is equally robust, attributing this benefit to multi-granularity training rather than conditioning. The per-cap penalty tracks each cap's share of training rows, yielding a falsifiable prediction for future work."
+  },
+  {
+   "id": "2506.14123v3",
+   "title": "Sampling from Your Language Model One Byte at a Time",
+   "date": "2025-06-17",
+   "authors": [
+    "Jonathan Hayase",
+    "Alisa Liu",
+    "Noah A. Smith",
+    "Sewoong Oh"
+   ],
+   "n_au": 4,
+   "cat": "cs.CL",
+   "comment": "28 pages, 9 figures",
+   "abs": "Tokenization is used almost universally by modern language models, enabling efficient text representation using multi-byte or multi-character tokens. However, prior work has shown that tokenization can introduce distortion into the model's generations, an issue known as the Prompt Boundary Problem (PBP). For example, users are often advised not to end their prompts with a space because it prevents the model from including the space as part of the next token. While this heuristic is effective in English, the underlying PBP continues to affect code generation and languages such as Chinese, where tokens often do not line up with word and syntactic boundaries. In this work, we present an inference-time method to convert any autoregressive LM with a BPE tokenizer into a character-level or byte-level LM. Our method efficiently solves the PBP and is also able to unify the vocabularies of language models with different tokenizers, allowing one to ensemble LMs with different tokenizers at inference time or transfer the post-training from one model to another using proxy-tuning. Code is available at https://github.com/SewoongLab/byte-sampler ."
+  },
+  {
+   "id": "2404.18071v2",
+   "title": "Can Perplexity Predict Fine-tuning Performance? An Investigation of Tokenization Effects on Sequential Language Models for Nepali",
+   "date": "2024-04-28",
+   "authors": [
+    "Nishant Luitel",
+    "Nirajan Bekoju",
+    "Anand Kumar Sah",
+    "Subarna Shakya"
+   ],
+   "n_au": 4,
+   "cat": "cs.CL",
+   "comment": "11 pages",
+   "abs": "The impact of subword tokenization on language model performance is well-documented for perplexity, with finer granularity consistently reducing this intrinsic metric. However, research on how different tokenization schemes affect a model's understanding capabilities remains limited, particularly for non-Latin script languages. Addressing this gap, we conducted a comprehensive evaluation of six distinct tokenization strategies by pretraining transformer-based language models for Nepali and evaluating their performance across multiple downstream tasks. While recent prominent models like GPT, RoBERTa, Claude, LLaMA, Mistral, Falcon, and MPT have adopted byte-level BPE tokenization, our findings demonstrate that for Nepali, SentencePiece tokenization consistently yields superior results on understanding-based tasks. Unlike previous studies that primarily focused on BERT-based architectures, our research specifically examines sequential transformer models, providing valuable insights for language model development in low-resource languages and highlighting the importance of tokenization strategy beyond perplexity reduction."
+  },
+  {
+   "id": "2606.15044v1",
+   "title": "Equity with Efficiency: An Empirical Study of Tokenizers for Multilingual Large Language Models",
+   "date": "2026-06-13",
+   "authors": [
+    "Kieron Seven Jun Wei Lee",
+    "Muhammad Reza Qorib",
+    "Andrew Ivan Soegeng",
+    "Hwee Tou Ng"
+   ],
+   "n_au": 4,
+   "cat": "cs.CL",
+   "comment": "",
+   "abs": "Multilingual large language models (LLMs) depend on subword tokenization to bridge discrete text and continuous neural representation. State-of-the-art multilingual LLMs often use Byte-level Byte-Pair Encoding (BPE) tokenizers that structurally favor high-resource languages and Latin scripts. For speakers of underrepresented languages, particularly those across Southeast Asia, this bias inflates inference costs and widens cross-lingual capability gaps. We present the first systematic comparison of equitable tokenizers on a unified benchmark spanning 11 Southeast Asian languages. Beyond tokenizer-level analysis of compression efficiency and cross-lingual equity, we assess downstream task performance through controlled 1.5B-parameter language model training using the same training data. Our results show that Parity-aware BPE lies on the Pareto frontier of the efficiency-equity trade-off, achieving strong compression parity at competitive cost. Morphology-Driven Byte Encoding delivers the best semantic reasoning performance through morphologically richer representations, albeit at a higher computational expense. Byte Latent Transformer underperforms on downstream tasks, possibly because its architectural assumptions misalign with the constraints of limited low-resource training data. Together, our findings demonstrate that cross-lingual fairness and tokenization efficiency are not fundamentally at odds, and offer practical guidance for designing equitable multilingual models."
+  },
+  {
+   "id": "2607.06054v1",
+   "title": "BlueMagpie-TTS: A Token-Efficient Tokenizer, Language Model, and TTS for Taiwanese-Accent Code-Switching Speech",
+   "date": "2026-07-07",
+   "authors": [
+    "Ho Lam Chung",
+    "Bo-Xuan Zheng",
+    "Cheng-Chieh Huang",
+    "Cheng-Han Chang"
+   ],
+   "n_au": 11,
+   "cat": "cs.SD",
+   "comment": "",
+   "abs": "Off-the-shelf TTS systems are poorly adapted to Taiwanese Mandarin. Their accent defaults to other Mandarin variants, their tokenizers over-segment common Taiwanese text, and their pronunciation degrades at code-switching boundaries where Chinese and English alternate within one utterance. These problems share one root: the text side lacks adaptation to the Taiwanese context. We address the text side from the bottom up. PangolinTokenizer, a byte-level BPE tokenizer trained on Taiwan-context data, reaches the lowest token rate (0.485 tokens/character) with the smallest vocabulary among nine tokenizers. Barbet, a billion-parameter Traditional-Chinese language model trained on PangolinTokenizer, serves as the text-semantic frontend and ranks first among comparable public models on a 14-task evaluation. BlueMagpie-TTS attaches Barbet to the pretrained acoustic stack of VoxCPM2 through a learned bridge, keeping the acoustic stack fixed. On a 1000-sentence Taiwan-localized test set, it lowers CER from 11.45% to 4.81% and WER from 14.83% to 5.36%, relative reductions of 58.0% and 63.9%. In a blind listening study on 500 of these sentences with ten listeners, 65.6% of majority votes prefer BlueMagpie-TTS."
+  },
+  {
+   "id": "2409.11501v1",
+   "title": "Egalitarian Language Representation in Language Models: It All Begins with Tokenizers",
+   "date": "2024-09-17",
+   "authors": [
+    "Menan Velayuthan",
+    "Kengatharaiyer Sarveswaran"
+   ],
+   "n_au": 2,
+   "cat": "cs.CL",
+   "comment": "Content - 8 pages, References - 3 pages",
+   "abs": "Tokenizers act as a bridge between human language and the latent space of language models, influencing how language is represented in these models. Due to the immense popularity of English-Centric Large Language Models (LLMs), efforts are being made to adapt them for other languages. However, we demonstrate that, from a tokenization standpoint, not all tokenizers offer fair representation for complex script languages such as Tamil, Sinhala, and Hindi, primarily due to the choice of pre-tokenization methods. We go further to show that pre-tokenization plays a more critical role than the tokenization algorithm itself in achieving an egalitarian representation of these complex script languages. To address this, we introduce an improvement to the Byte Pair Encoding (BPE) algorithm by incorporating graphemes, which we term Grapheme Pair Encoding (GPE). Our experiments show that grapheme-based character extraction outperforms byte-level tokenizers for complex scripts. We validate this approach through experiments on Tamil, Sinhala, and Hindi."
+  }
+ ]
+}

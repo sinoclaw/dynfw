@@ -8,14 +8,6 @@ def make_arch_model(arch, vocab, D, n_layer, nh, mlp_mult):
     if arch == 'v6':
         from dynfw.models.fused_fw_fw_cycle import BDHBlockFWCycleLM
         return BDHBlockFWCycleLM(D=D, nh=nh, vocab=vocab, n_layer=n_layer, steps=1, mlp_mult=mlp_mult, W=256)
-    elif arch == 'v7':
-        from dynfw.models.fused_fw_dla_cycle import BDHBlockDLACycleLM
-        return BDHBlockDLACycleLM(D=D, nh=nh, vocab=vocab, n_layer=n_layer, steps=1, mlp_mult=mlp_mult, W=256, K=8)
-
-def tokenize_bytes(text_file, max_chars=3_000_000, block=256):
-    raw = open(text_file, 'r', encoding='utf-8', errors='ignore').read(max_chars)
-    data = raw.encode('utf-8')
-    seqs = [list(data[i:i+block]) for i in range(0, len(data)-block, block)]
     return torch.tensor(seqs).long()
 
 def train_lm(model, data, vocab, epochs=3, lr=3e-4, batch=8, seed=0):

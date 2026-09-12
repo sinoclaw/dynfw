@@ -95,24 +95,6 @@ def make_student(args, teacher_vocab, device):
                               n_layer=args.n_layer, steps=args.cycle_steps,
                               mlp_mult=args.mlp_mult, W=_w(args))
 
-    elif args.arch == 'fusedfw_dla_cycle':
-        from dynfw.models.fused_fw_dla_cycle import BDHBlockDLACycleLM
-        m = BDHBlockDLACycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
-                               n_layer=args.n_layer, steps=args.cycle_steps,
-                               mlp_mult=args.mlp_mult, W=_w(args), K=getattr(args,'dla_k',16))
-
-    elif args.arch == 'fusedfw_slot_topk':
-        # v8: DLA 状态槽 + MoBA 式【槽选择】(读侧从无差别 sum 改为选择性聚合)
-        #     参照 MoBA arXiv:2502.13189 / NSA 2502.11089 / DLA 2606.10650
-        from dynfw.models.fused_fw_dla_topk_cycle import BDHBlockSlotCycleLM
-        m = BDHBlockSlotCycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
-                                n_layer=args.n_layer, steps=args.cycle_steps,
-                                mlp_mult=args.mlp_mult,
-                                W=_w(args),
-                                K=getattr(args,'dla_k',16),
-                                read_mode=args.read_mode, topk=args.slot_topk)
-
-
     elif args.arch == 'fusedfw_full':
         m = FusedFWFull(D=args.dim, N=args.slots, k=args.k, nh=args.nh,
                         mlp_mult=args.mlp_mult, vocab=teacher_vocab,
@@ -172,7 +154,7 @@ def main():
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     ap = argparse.ArgumentParser()
-    ap.add_argument('--arch', type=str, default='fusedfw', choices=['fusedfw', 'fusedfw_cycle', 'fusedfw_rec', 'fusedfw_la', 'fusedfw_la_cycle', 'fusedfw_fw_cycle', 'fusedfw_vla_cycle', 'fusedfw_rawfw_cycle', 'fusedfw_gdn_cycle', 'fusedfw_dla_cycle', 'fusedfw_slot_topk', 'fusedfw_full', 'fusedfw_full_shared', 'fusedfw_lin', 'bdh_gla', 'bdh_gla2', 'bdh_gla3', 'bdh', 'bdh_rawfw_qwen', 'tf'],
+    ap.add_argument('--arch', type=str, default='fusedfw', choices=['fusedfw', 'fusedfw_cycle', 'fusedfw_rec', 'fusedfw_la', 'fusedfw_la_cycle', 'fusedfw_fw_cycle', 'fusedfw_vla_cycle', 'fusedfw_rawfw_cycle', 'fusedfw_gdn_cycle', 'fusedfw_full', 'fusedfw_full_shared', 'fusedfw_lin', 'bdh_gla', 'bdh_gla2', 'bdh_gla3', 'bdh', 'bdh_rawfw_qwen', 'tf'],
                     help='学生架构：fusedfw / fusedfw_rec / fusedfw_la / fusedfw_full(BDH完整) / bdh / tf')
     ap.add_argument('--teacher', type=str, default='Qwen/Qwen3-0.6B')
     ap.add_argument('--data', type=str, required=True, help='语料文本文件 (每行一行)')

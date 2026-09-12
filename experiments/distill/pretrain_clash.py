@@ -31,10 +31,6 @@ def build(arch, D, nh, n_layer, vocab, mlp_mult, block, steps=1, K=8):
         from dynfw.models.bdh_rawfw_qwen import BDHRawFWQwen
         return BDHRawFWQwen(D=D, n_layer=n_layer, nh=nh, mlp_mult=mlp_mult, vocab=vocab,
                             dropout=0.0, W=block)
-    if arch in ('v7', 'dla'):
-        from dynfw.models.fused_fw_dla_cycle import BDHBlockDLACycleLM
-        return BDHBlockDLACycleLM(D=D, nh=nh, vocab=vocab, n_layer=n_layer, steps=steps,
-                                  mlp_mult=mlp_mult, W=block, K=K)
     if arch == 'tf':
         from dynfw.models.transformer import TF_sdpa
         return TF_sdpa(D=D, nh=nh, n_layer=n_layer, vocab=vocab, maxT=block)
@@ -56,7 +52,7 @@ if __name__ == '__main__':
     ap.add_argument('--nh', type=int, default=16)
     ap.add_argument('--n-layer', type=int, default=2)
     ap.add_argument('--mlp-mult', type=int, default=64)
-    ap.add_argument('--k', type=int, default=8, help='DLA 状态槽容量K(设小触发合并)')
+    ap.add_argument('--k', type=int, default=8, help='(unused; v7 DLA 已删除)')
     ap.add_argument('--seed', type=int, default=0)
     ap.add_argument('--val-frac', type=float, default=0.01)
     ap.add_argument('--max-lines', type=int, default=10000, help='仅取前N行控制tokenize内存')

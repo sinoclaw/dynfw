@@ -31,14 +31,11 @@ class V6HFModel(PreTrainedModel):
 
     def __init__(self, config):
         super().__init__(config)
-        if config.fw_arch == "v6":
-            from dynfw.models.fused_fw_fw_cycle import BDHBlockFWCycleLM
-            self.inner = BDHBlockFWCycleLM(D=config.D, nh=config.nh, vocab=config.vocab_size,
-                                           n_layer=config.n_layer, steps=1, mlp_mult=config.mlp_mult, W=256)
-        else:
-            from dynfw.models.fused_fw_dla_cycle import BDHBlockDLACycleLM
-            self.inner = BDHBlockDLACycleLM(D=config.D, nh=config.nh, vocab=config.vocab_size,
-                                            n_layer=config.n_layer, steps=1, mlp_mult=config.mlp_mult, W=256, K=8)
+        if config.fw_arch != "v6":
+            raise ValueError(f"unsupported fw_arch={config.fw_arch!r}: v7/v8 (DLA) 已于 2026-09-12 删除，见 docs/ARCHITECTURE-MAP.md")
+        from dynfw.models.fused_fw_fw_cycle import BDHBlockFWCycleLM
+        self.inner = BDHBlockFWCycleLM(D=config.D, nh=config.nh, vocab=config.vocab_size,
+                                       n_layer=config.n_layer, steps=1, mlp_mult=config.mlp_mult, W=256)
 
     def forward(self, input_ids, attention_mask=None, labels=None, **kwargs):
         lg, _ = self.inner.forward(input_ids, targets=None)  # [B,T,V]

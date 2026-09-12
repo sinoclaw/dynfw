@@ -11,8 +11,6 @@ from dynfw.models.fused_fw_la_cycle import BDHBlockCycleLM
 from dynfw.models.fused_fw_fw_cycle import BDHBlockFWCycleLM
 from dynfw.models.fused_fw_rawfw_cycle import BDHBlockRawFWCycleLM
 from dynfw.models.fused_fw_gdn_cycle import BDHBlockGDNCycleLM
-from dynfw.models.fused_fw_dla_cycle import BDHBlockDLACycleLM
-from dynfw.models.fused_fw_dla_topk_cycle import BDHBlockSlotCycleLM
 from dynfw.models.fused_fw_full import FusedFWFull
 from dynfw.models.fused_fw_full_shared import FusedFWFullShared
 from dynfw.models.fused_fw_lin import FusedFWLin
@@ -32,8 +30,6 @@ builders = [
     ('fusedfw_fw_cycle',     lambda: BDHBlockFWCycleLM(D=D, nh=NH, vocab=V, n_layer=1, steps=2, mlp_mult=MM, W=W)),
     ('fusedfw_rawfw_cycle',  lambda: BDHBlockRawFWCycleLM(D=D, nh=NH, vocab=V, n_layer=1, steps=2, mlp_mult=MM, W=W)),
     ('fusedfw_gdn_cycle',    lambda: BDHBlockGDNCycleLM(D=D, nh=NH, vocab=V, n_layer=1, steps=2, mlp_mult=MM, W=W)),
-    ('fusedfw_dla_cycle',    lambda: BDHBlockDLACycleLM(D=D, nh=NH, vocab=V, n_layer=1, steps=2, mlp_mult=MM, W=W, K=K)),
-    ('fusedfw_slot_topk',    lambda: BDHBlockSlotCycleLM(D=D, nh=NH, vocab=V, n_layer=1, steps=2, mlp_mult=MM, W=W, K=K, read_mode='softmaxK', topk=2)),
     ('fusedfw_full',         lambda: FusedFWFull(D=D, N=N, k=K, nh=NH, mlp_mult=MM, vocab=V, use_ffn=False, n_layer=1, use_softmax=False, tie=False)),
     ('fusedfw_full_shared',  lambda: FusedFWFullShared(D=D, N=N, k=K, nh=NH, mlp_mult=MM, vocab=V, use_ffn=False, n_layer=1, use_softmax=False, tie=False)),
     ('fusedfw_lin',          lambda: FusedFWLin(D=D, nh=NH, dk=32, vocab=V, n_layer=1, use_ffn=True)),

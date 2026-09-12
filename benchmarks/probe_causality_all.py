@@ -14,8 +14,6 @@ DEV = 'cuda' if torch.cuda.is_available() else 'cpu'
 # (名称, 构造 lambda)  —— 全部用 n_layer=2/3 以暴露跨 block 泄漏
 def build_all(D=64, nh=4, mlp_mult=16, W=64, vocab=256, n_layer=3):
     from dynfw.models.fused_fw_fw_cycle import BDHBlockFWCycleLM
-    from dynfw.models.fused_fw_dla_cycle import BDHBlockDLACycleLM
-    from dynfw.models.fused_fw_dla_topk_cycle import BDHBlockSlotCycleLM
     from dynfw.models.fused_fw_gdn_cycle import BDHBlockGDNCycleLM
     from dynfw.models.fused_fw_rawfw_cycle import BDHBlockRawFWCycleLM
     from dynfw.models.fused_fw_vla_cycle import BDHBlockVLACycleLM
@@ -28,8 +26,6 @@ def build_all(D=64, nh=4, mlp_mult=16, W=64, vocab=256, n_layer=3):
         ('transformer(TF_sdpa)',  lambda: TF_sdpa(D=D, nh=nh, vocab=vocab, n_layer=n_layer)),
         ('v6 fused_fw_fw_cycle',  lambda: BDHBlockFWCycleLM(D=D, nh=nh, vocab=vocab, n_layer=n_layer, steps=1, mlp_mult=mlp_mult, W=W)),
         ('la_cycle',              lambda: BDHBlockCycleLM(D=D, nh=nh, vocab=vocab, use_ffn=True, n_layer=n_layer, steps=1, mlp_mult=mlp_mult)),
-        ('v7 dla_cycle',          lambda: BDHBlockDLACycleLM(D=D, nh=nh, vocab=vocab, n_layer=n_layer, steps=1, mlp_mult=mlp_mult, W=W, K=8)),
-        ('v8 dla_topk_cycle',     lambda: BDHBlockSlotCycleLM(D=D, nh=nh, vocab=vocab, n_layer=n_layer, steps=1, mlp_mult=mlp_mult, W=W, K=16, topk=4)),
         ('v6.6 gdn_cycle',        lambda: BDHBlockGDNCycleLM(D=D, nh=nh, vocab=vocab, n_layer=n_layer, steps=1, mlp_mult=mlp_mult, W=W)),
         ('rawfw_cycle',           lambda: BDHBlockRawFWCycleLM(D=D, nh=nh, vocab=vocab, n_layer=n_layer, steps=1, mlp_mult=mlp_mult, W=W)),
         ('vla_cycle',             lambda: BDHBlockVLACycleLM(D=D, nh=nh, vocab=vocab, n_layer=n_layer, steps=1, mlp_mult=mlp_mult, W=W)),

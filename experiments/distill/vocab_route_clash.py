@@ -9,9 +9,6 @@ def make_model(arch, vocab, D=128, nh=16, n_layer=2, mlp_mult=64, K=8):
     if arch == 'v6':
         from dynfw.models.fused_fw_fw_cycle import BDHBlockFWCycleLM
         return BDHBlockFWCycleLM(D=D, nh=nh, vocab=vocab, n_layer=n_layer, steps=1, mlp_mult=mlp_mult, W=256)
-    elif arch == 'v7':
-        from dynfw.models.fused_fw_dla_cycle import BDHBlockDLACycleLM
-        return BDHBlockDLACycleLM(D=D, nh=nh, vocab=vocab, n_layer=n_layer, steps=1, mlp_mult=mlp_mult, W=256, K=K)
     else:
         raise ValueError(arch)
 

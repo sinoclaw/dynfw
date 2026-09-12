@@ -75,19 +75,14 @@ def make_student(args, teacher_vocab, device):
         from dynfw.models.fused_fw_fw_cycle import BDHBlockFWCycleLM
         m = BDHBlockFWCycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
                               n_layer=args.n_layer, steps=args.cycle_steps,
-                              mlp_mult=args.mlp_mult, W=_w(args))
+                              mlp_mult=args.mlp_mult, W=_w(args),
+                              read_mode=getattr(args, 'fw_read', 'softmax'))
 
     elif args.arch == 'fusedfw_vla_cycle':
         from dynfw.models.fused_fw_vla_cycle import BDHBlockVLACycleLM
         m = BDHBlockVLACycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
                                n_layer=args.n_layer, steps=args.cycle_steps,
                                mlp_mult=args.mlp_mult, W=args.block)
-
-    elif args.arch == 'fusedfw_rawfw_cycle':
-        from dynfw.models.fused_fw_rawfw_cycle import BDHBlockRawFWCycleLM
-        m = BDHBlockRawFWCycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
-                                 n_layer=args.n_layer, steps=args.cycle_steps,
-                                 mlp_mult=args.mlp_mult, W=_w(args))
 
     elif args.arch == 'fusedfw_gdn_cycle':
         from dynfw.models.fused_fw_gdn_cycle import BDHBlockGDNCycleLM
@@ -154,7 +149,7 @@ def main():
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     ap = argparse.ArgumentParser()
-    ap.add_argument('--arch', type=str, default='fusedfw', choices=['fusedfw', 'fusedfw_cycle', 'fusedfw_rec', 'fusedfw_la', 'fusedfw_la_cycle', 'fusedfw_fw_cycle', 'fusedfw_vla_cycle', 'fusedfw_rawfw_cycle', 'fusedfw_gdn_cycle', 'fusedfw_full', 'fusedfw_full_shared', 'fusedfw_lin', 'bdh_gla', 'bdh_gla2', 'bdh_gla3', 'bdh', 'bdh_rawfw_qwen', 'tf'],
+    ap.add_argument('--arch', type=str, default='fusedfw', choices=['fusedfw', 'fusedfw_cycle', 'fusedfw_rec', 'fusedfw_la', 'fusedfw_la_cycle', 'fusedfw_fw_cycle', 'fusedfw_vla_cycle', 'fusedfw_gdn_cycle', 'fusedfw_full', 'fusedfw_full_shared', 'fusedfw_lin', 'bdh_gla', 'bdh_gla2', 'bdh_gla3', 'bdh', 'bdh_rawfw_qwen', 'tf'],
                     help='学生架构：fusedfw / fusedfw_rec / fusedfw_la / fusedfw_full(BDH完整) / bdh / tf')
     ap.add_argument('--teacher', type=str, default='Qwen/Qwen3-0.6B')
     ap.add_argument('--data', type=str, required=True, help='语料文本文件 (每行一行)')
@@ -178,6 +173,8 @@ def main():
     ap.add_argument('--nh', type=int, default=4, help='TF 注意力头数')
     ap.add_argument('--mlp-mult', type=int, default=128, dest='mlp_mult', help='BDH 稀疏维乘数 N=mlp_mult*D//nh')
     ap.add_argument('--dla-k', type=int, default=16, help='DLA状态槽容量K(设小如4可触发合并)')
+    ap.add_argument('--fw-read', type=str, default='raw', choices=['softmax', 'raw'],
+                    dest='fw_read', help='v6 块内读侧: softmax(原版) / raw(对齐 BDH 官方)')
     ap.add_argument('--w', type=int, default=0, dest='w',
                     help='块内窗口宽 W（0=用 block）。设小(如64)可让层内出现多个 chunk，'
                          '使跨 chunk 记忆在层内累积 —— 泄漏修复后各架构必须用同一 W 才可公平对比')

@@ -31,6 +31,9 @@
 | **最优实现形态** | `to_opt5` 融合实现（数学等价，+2.19× 吞吐） | `dynfw/models/fused_fw_fw_cycle_opt.py` | ✅ 有效（属速度账，与泄漏无关） |
 
 > 主线判定依据：`train_talk.py --arch v6/v6w`；`benchmarks/seg_attr_2b.py` 的 `CFG2B`；`PLAN-DISTILL-THEN-TRAIN.md` Step1。
+>
+> **v6 当前形态（2026-09-12 起）**：块内读侧默认 = **`raw`**（对齐 BDH-CQ 官方配方），实测中位 KL **84.57**；
+> 原 softmax 形态（93.05）保留为 `--fw-read softmax` 消融项。详见 §4.2。
 
 ---
 
@@ -110,7 +113,21 @@ corpus_en，block 256 / batch 4 / max_batches 40 / epochs 20，共享教师 logi
 > （chunk 数 = T / W）。W = block 时整层只有 1 个 chunk，**跨块记忆被静默关闭**，架构退化为「仅块内自注意」——
 > 此时读数与架构能力无关（v6 的 354 全由此产生，不是崩塌）。
 
-### 4.2 机制触发核查（2026-09-12 新增，必查项）
+### 4.2 v6 块内读侧单变量对比（2026-09-12，W=64 同口径 3 seed）
+| read_mode | 中位 KL | 逐 seed | 判定 |
+|---|---|---|---|
+| `softmax`（原默认） | 93.05 | 99.00 / 87.66 / 93.05 | ❌ 负担 |
+| **`raw`（新默认）** | **84.57** | 84.57 / 81.61 / 87.42 | ✅ 三 seed 全改善 |
+
+**结论**：v6 在 v5→v6 改造时**多改了一个变量**（v5 本是 raw，v6 写成 softmax）→ 白丢 8.5 分。
+改回 raw 后 v6 = 84.57（对齐 BDH-CQ 官方配方）。
+
+**等价性判定（决定性）**：`v6(read_mode='raw')` 与 `fused_fw_rawfw_cycle.py` 的
+**参数量相同（45,187,072）、参数逐位相同 8/8、logits maxdiff = 0.000000e+00（T=64/256/1024）**
+⇒ **两者是同一个模型** ⇒ `rawfw_cycle` 已删除并合并进 v6。
+v6 默认 `read_mode='raw'`（`distill_qwen.py --fw-read` 默认同为 raw；softmax 保留为可选消融）。
+
+### 4.3 机制触发核查（2026-09-12 新增，必查项）
 | 架构 | 机制 | 触发判据 | 实测 | 判定 |
 |---|---|---|---|---|
 | `fw_cycle`(v6) | 跨 chunk fast-weight 累积 | chunk 数 > 1 | W=64 → 4 chunks | ✅ 触发 |
@@ -172,6 +189,7 @@ corpus_en，block 256 / batch 4 / max_batches 40 / epochs 20，共享教师 logi
 | 版本 | 原文件 | 删除理由（实测证据） |
 |---|---|---|
 | **v7 DLA** | `fused_fw_dla_cycle.py` | 「信息感知合并」是 **null operation**：读侧 `Σ_i S_i`（无差别求和）+ 合并 `S_i+S_{i+1}`（也是求和）⇒ **ΣS 恒定 ⇒ 输出恒等**。<br>实测（T=1024/W=64，16 chunks，合并必被触发）：合并策略 `argmin`(原版) vs `argmax`(相反) vs `rand`(随机) → maxdiff **0.000e+00**；K=2（强制合并）vs K=64（不合并）→ maxdiff **0.000e+00**。<br>⇒ v7 与 v6 **数学等价**，不是精度机制。**DLA 的合并真实作用 = 容量控制（显存有界），非保信息** —— 我方文件头「尽量保信息」的动机系误读。 |
+| **`rawfw_cycle`** | `fused_fw_rawfw_cycle.py` | 与 `v6(read_mode='raw')` **逐位等价**（参数量相同 45,187,072、参数 8/8 张量逐位相同、logits maxdiff = 0.000000e+00 @T=64/256/1024）→ 纯重复，**合并进 v6** |
 | **v8 slot_topk** | `fused_fw_dla_topk_cycle.py` | 唯一真正改读侧的版本（**真分化**：T=256 时与 v6 maxdiff 0.944），但同口径 KL **97.47 vs v6 的 93.05 = 差 4.4 分** → 4-chunk 场景下 Top-K 选择性读**反而丢信息**（K=8/topk=2）。 |
 
 **删除范围**：2 个模型本体 + 蒸馏入口(`distill_qwen.py`)分支 + 因果探针条目 +

@@ -8,7 +8,7 @@ export PYTHONPATH=/data/dynfw
 D="--block 256 --batch 4 --max-batches 40 --epochs 20 --dim 128 --nh 16 --n-layer 2 --mlp-mult 64 --cycle-steps 1 --teacher /data/models/Qwen3-0.6B --data /data/dynfw/data/corpus_en.txt --shared-logits /data/dynfw/results/shared_logits"
 
 # 中招架构（跨 block memory 泄漏，须重测）+ 锚点（本来就因果正确）
-ARCHS="fusedfw_fw_cycle fusedfw_la_cycle fusedfw_rawfw_cycle fusedfw_gdn_cycle fusedfw_dla_cycle fusedfw_slot_topk bdh tf"
+ARCHS="fusedfw_fw_cycle fusedfw_la_cycle fusedfw_gdn_cycle fusedfw_dla_cycle fusedfw_slot_topk bdh tf"
 
 for sd in 0 1 2; do
   for a in $ARCHS; do

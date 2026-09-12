@@ -5,7 +5,7 @@ APPLY = '--apply' in sys.argv
 ROOT = pathlib.Path('/data/dynfw/dynfw/models')
 FILES = ['bdh_gla.py', 'bdh_gla_v2.py', 'bdh_gla_v3.py', 'bdh_qwen.py', 'bdh_rawfw_qwen.py',
          'fused_fw_cycle.py',          'fused_fw_fw_cycle.py', 'fused_fw_gdn_cycle.py', 'fused_fw_la.py', 'fused_fw_la_cycle.py',
-         'fused_fw_lin.py', 'fused_fw_qwen.py', 'fused_fw_rawfw_cycle.py', 'fused_fw_rec.py']
+         'fused_fw_lin.py', 'fused_fw_qwen.py', 'fused_fw_rec.py']
 SPECIAL = ['fused_fw_full_shared.py']
 
 

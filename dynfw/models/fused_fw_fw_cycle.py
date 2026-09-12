@@ -1,4 +1,8 @@
-"""DynFW 蒸馏版 v6: BDHBlockFWCycle —— 在 v5(BDHBlockCycleLM) 基础上，把整段 T×T 注意
+"""DynFW 蒸馏版 v6: BDHBlockFWCycle
+
+注(2026-09-12): 块内读侧默认改为 raw（对齐 BDH-CQ 官方），实测 93.05→84.57（3 seed 全改善）；
+    且 read_mode='raw' 时与 fused_fw_rawfw_cycle 逐位等价（logits maxdiff=0）→ 后者已删除合并。
+    softmax 版保留为可选消融（--fw-read softmax）。 —— 在 v5(BDHBlockCycleLM) 基础上，把整段 T×T 注意
 换成"块内局部注意 + 跨块 fast-weight 记忆累积"(BDH 论文擅长长上下文的真机制)。
 
 背景(爸爸指令"攻 O(T) 化, 让擅长长上下文成真"):
@@ -22,9 +26,11 @@ def get_freqs(n, theta, dtype):
 
 class FWAttention(nn.Module):
     """块内精确注意(窗口W) + 跨块 fast-weight 记忆检索(累积 O(T))。"""
-    def __init__(self, config):
+    def __init__(self, config, read_mode='raw'):
         super().__init__()
         self.config = config
+        # read_mode: 'softmax' = v6 原版(块内 softmax); 'raw' = 对齐 BDH-CQ 官方/rawfw(mask=0 不归一化)
+        self.read_mode = read_mode
         nh = config.n_head
         D = config.n_embd
         N = config.mlp_internal_dim_multiplier * D // nh
@@ -67,9 +73,15 @@ class FWAttention(nn.Module):
             # 因果掩码: 位置 i 看自己及之前 (diagonal=0, 对齐标准因果LM/教师语义)
             #   ⚠️ 必须用 -inf (而非0) + softmax, 否则未来位置 softmax 后权重=1/Z≠0 → 泄漏未来
             #   (原实现 masked_fill(~causal,0) 是因果bug; 已用探针验证 diagonal=0 无泄漏无NaN)
-            causal = torch.tril(torch.ones(w, w, device=Q.device, dtype=torch.bool), diagonal=0)
-            sim = sim.masked_fill(~causal, float('-inf'))
-            attn = torch.softmax(sim.float(), dim=-1)  # [B,nh,w,w]
+            if self.read_mode == 'raw':
+                # raw 块内（对齐 BDH-CQ 官方 bh_cq.py / rawfw_cycle）：mask=0 是算术真 0，
+                # diagonal=-1 不看自己；不做 softmax（Pre-LN + raw 协同）
+                causal = torch.tril(torch.ones(w, w, device=Q.device, dtype=torch.bool), diagonal=-1)
+                attn = sim.masked_fill(~causal, 0.0)          # [B,nh,w,w]
+            else:
+                # softmax 块内（v6 原版）：必须 mask=-inf，否则 softmax(0)=1/Z≠0 会偷看未来
+                causal = torch.tril(torch.ones(w, w, device=Q.device, dtype=torch.bool), diagonal=0)
+                attn = torch.softmax(sim.masked_fill(~causal, float('-inf')).float(), dim=-1)
             agg = attn @ v_c                 # [B,nh,w,D]
             # 跨块 fast-weight 检索: 用当前 q 从历史状态检索
             if new_mem is not None and (st > 0 or memories is not None):
@@ -90,14 +102,14 @@ class Config:
 
 class BDHBlockFWCycle(nn.Module):
     """v6: 与 v5 BDHBlockCycle 完全一致, 唯一差异 = attn 用 FWAttention(块内+fast-weight)。"""
-    def __init__(self, D, nh, mlp_mult, vocab, steps=1, W=512):
+    def __init__(self, D, nh, mlp_mult, vocab, steps=1, W=512, read_mode='raw'):
         super().__init__()
         cfg = Config(1, D, nh, mlp_mult, vocab)
         self.config = cfg; self.D = D; self.vocab = vocab; self.steps = steps; self.W = W
         N = mlp_mult * D // nh
         self.decoder = nn.Parameter(torch.zeros((nh * N, D)).normal_(std=0.02))
         self.encoder = nn.Parameter(torch.zeros((nh, D, N)).normal_(std=0.02))
-        self.attn = FWAttention(cfg)
+        self.attn = FWAttention(cfg, read_mode=read_mode)
         self.ln = nn.LayerNorm(D, elementwise_affine=False, bias=False)
         self.drop = nn.Dropout(0.0)
         self.encoder_v = nn.Parameter(torch.zeros((nh, D, N)).normal_(std=0.02))
@@ -140,12 +152,14 @@ class BDHBlockFWCycle(nn.Module):
 
 class BDHBlockFWCycleLM(nn.Module):
     """LM 封装: embed -> BDHBlockFWCycle -> head。Qwen3 vocab 兼容。"""
-    def __init__(self, D=128, nh=4, vocab=151936, n_layer=1, steps=1, mlp_mult=128, W=512):
+    def __init__(self, D=128, nh=4, vocab=151936, n_layer=1, steps=1, mlp_mult=128, W=512,
+                 read_mode='raw'):
         super().__init__()
         self.D = D; self.nh = nh; self.vocab = vocab; self.n_layer = n_layer; self.steps = steps; self.W = W
         self.e = nn.Embedding(vocab, D)
         self.ln = nn.LayerNorm(D, elementwise_affine=False, bias=False)
-        self.blocks = nn.ModuleList([BDHBlockFWCycle(D, nh, mlp_mult, vocab, steps=steps, W=W)
+        self.blocks = nn.ModuleList([BDHBlockFWCycle(D, nh, mlp_mult, vocab, steps=steps, W=W,
+                                                     read_mode=read_mode)
                                      for _ in range(n_layer)])
         self.head = nn.Linear(D, vocab, bias=False)
         self.apply(self._init_weights)

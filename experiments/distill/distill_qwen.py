@@ -19,24 +19,10 @@
 """
 import os, argparse, json, torch
 import torch.nn.functional as F
-from dynfw.models.fused_fw_qwen import FusedFWQwen          # 学生 A（无时序求和rho）
-from dynfw.models.fused_fw_cycle import FusedFWCYBLE          # 学生 A-cyc（循环潜推理,吸收BDH-CQ）
-from dynfw.models.fused_fw_rec import FusedFWRecurrent      # 学生 A'（方向A：递推rho保留顺序）
-from dynfw.models.fused_fw_la import FusedFWLa              # 学生 A''（吸收BDH：内容寻址因果读取）
-
-
-from dynfw.models.fused_fw_full import FusedFWFull                  # 学生 D（BDH 完整机制分)
-from dynfw.models.fused_fw_full_shared import FusedFWFullShared     # 学生 E（省参：weight-sharing + tie词表，官方BDH机制）
-from dynfw.models.fused_fw_lin import FusedFWLin             # 学生 A''''（线性注意力+内容寻址）
 try:                                                         # GLA 线依赖 fla；缺 fla 时其余架构照常可用
-    from dynfw.models.bdh_gla import BDHGLA                 # 学生 M（BDH稀疏 + GLA线性核 = BDH+Mamba式）
-    from dynfw.models.bdh_gla_v2 import BDHGLAv2            # 学生 M2（v2：完整保留BDH表达力 + GLA线性）
-    from dynfw.models.bdh_gla_v3 import BDHGLAv3            # 学生 M3（v3：x_sparse作Q=K=V过GLA，最忠实BDH K-is-Q）
     _GLA_ERR = None
 except ImportError as _e:                                    # ModuleNotFoundError: fla
-    BDHGLA = BDHGLAv2 = BDHGLAv3 = None
     _GLA_ERR = _e
-from dynfw.models.bdh_qwen import BDHQwen                   # 学生 C（BDH：稀疏+linear attention保顺序）
 from dynfw.models.transformer import TF_sdpa                # 学生 B（对照）
 from dynfw.training.chunked_kl import chunked_kl_loss as chunked_kl_loss  # 分块 KL（大词表显存墙，--chunk>0 启用）
 
@@ -55,17 +41,6 @@ def make_student(args, teacher_vocab, device):
     if args.arch == 'fusedfw':
         m = FusedFWQwen(D=args.dim, N=args.slots, k=args.k,
                         vocab=teacher_vocab, use_ffn=True, n_layer=args.n_layer)
-    elif args.arch == 'fusedfw_cycle':
-        m = FusedFWCYBLE(D=args.dim, N=args.slots, k=args.k,
-                         vocab=teacher_vocab, use_ffn=True, n_layer=args.n_layer,
-                         steps=args.cycle_steps)
-    elif args.arch == 'fusedfw_rec':
-        m = FusedFWRecurrent(D=args.dim, N=args.slots, k=args.k,
-                             vocab=teacher_vocab, use_ffn=True, n_layer=args.n_layer)
-    elif args.arch == 'fusedfw_la':
-        m = FusedFWLa(D=args.dim, N=args.slots, k=args.k, nh=args.nh,
-                      vocab=teacher_vocab, use_ffn=True, n_layer=args.n_layer)
-
     elif args.arch == 'fusedfw_fw_cycle':
         from dynfw.models.fused_fw_fw_cycle import BDHBlockFWCycleLM
         m = BDHBlockFWCycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
@@ -91,39 +66,6 @@ def make_student(args, teacher_vocab, device):
                           read_mode=getattr(args, 'fw_read', 'raw'),
                           gate_mode=getattr(args, 'fla_gate', 'token'))
 
-    elif args.arch == 'fusedfw_full':
-        m = FusedFWFull(D=args.dim, N=args.slots, k=args.k, nh=args.nh,
-                        mlp_mult=args.mlp_mult, vocab=teacher_vocab,
-                        use_ffn=False, n_layer=args.n_layer, use_softmax=args.softmax, tie=args.tie)
-    elif args.arch == 'fusedfw_full_shared':
-        m = FusedFWFullShared(D=args.dim, N=args.slots, k=args.k, nh=args.nh,
-                              mlp_mult=args.mlp_mult, vocab=teacher_vocab,
-                              use_ffn=False, n_layer=args.n_layer, use_softmax=args.softmax,
-                              tie=args.tie)
-    elif args.arch == 'fusedfw_lin':
-        m = FusedFWLin(D=args.dim, nh=args.nh, dk=32, vocab=teacher_vocab,
-                       n_layer=args.n_layer, use_ffn=True)
-    elif args.arch == 'bdh_gla':
-        assert BDHGLA is not None, f'bdh_gla 需要 fla（flash-linear-attention）：{_GLA_ERR}'
-        m = BDHGLA(D=args.dim, nh=args.nh, dk=32, vocab=teacher_vocab,
-                   n_layer=args.n_layer, use_ffn=True)
-    elif args.arch == 'bdh_gla2':
-        assert BDHGLAv2 is not None, f'bdh_gla2 需要 fla（flash-linear-attention）：{_GLA_ERR}'
-        m = BDHGLAv2(D=args.dim, nh=args.nh, dk=args.dk, N=args.slots, vocab=teacher_vocab,
-                     n_layer=args.n_layer, use_ffn=True)
-    elif args.arch == 'bdh_gla3':
-        assert BDHGLAv3 is not None, f'bdh_gla3 需要 fla（flash-linear-attention）：{_GLA_ERR}'
-        m = BDHGLAv3(D=args.dim, nh=args.nh, N=args.slots, vocab=teacher_vocab,
-                     n_layer=args.n_layer, use_ffn=True)
-    elif args.arch == 'bdh':
-        m = BDHQwen(D=args.dim, n_layer=args.n_layer, nh=args.nh,
-                    mlp_mult=args.mlp_mult, vocab=teacher_vocab, dropout=0.0)
-
-    elif args.arch == 'bdh_rawfw_qwen':
-        from dynfw.models.bdh_rawfw_qwen import BDHRawFWQwen
-        m = BDHRawFWQwen(D=args.dim, n_layer=args.n_layer, nh=args.nh,
-                         mlp_mult=args.mlp_mult, vocab=teacher_vocab, dropout=0.0,
-                         W=_w(args))
     elif args.arch == 'tf':
         m = TF_sdpa(D=args.dim, nh=args.nh, n_layer=args.n_layer,
                     vocab=teacher_vocab, maxT=args.block)
@@ -161,7 +103,7 @@ def main():
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     ap = argparse.ArgumentParser()
-    ap.add_argument('--arch', type=str, default='fusedfw', choices=['fusedfw', 'fusedfw_cycle', 'fusedfw_rec', 'fusedfw_la', 'fusedfw_fw_cycle', 'fusedfw_gdn_cycle', 'fusedfw_gdn_fla', 'fusedfw_full', 'fusedfw_full_shared', 'fusedfw_lin', 'bdh_gla', 'bdh_gla2', 'bdh_gla3', 'bdh', 'bdh_rawfw_qwen', 'tf'],
+    ap.add_argument('--arch', type=str, default='fusedfw_fw_cycle', choices=['fusedfw_fw_cycle', 'fusedfw_gdn_cycle', 'fusedfw_gdn_fla', 'tf'],
                     help='学生架构：fusedfw / fusedfw_rec / fusedfw_la / fusedfw_full(BDH完整) / bdh / tf')
     ap.add_argument('--teacher', type=str, default='Qwen/Qwen3-0.6B')
     ap.add_argument('--data', type=str, default='',  help='语料文本文件 (每行一行)')

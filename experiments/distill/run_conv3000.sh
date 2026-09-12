@@ -28,7 +28,7 @@ for sd in 0 1 2; do
 done
 for sd in 0 1 2; do
   echo "=== [$(date +%H:%M:%S)] v6(raw opt5) seed=$sd 3000step ==="
-  $PY experiments/distill/distill_qwen.py --arch fusedfw $D --seed $sd --opt5 \
+  $PY experiments/distill/distill_qwen.py --arch fusedfw_fw_cycle $D --seed $sd --opt5 \
       --out "/data/dynfw/results/conv3000_v6_s${sd}" 2>&1 | grep -E "DONE|Error|Traceback" | tail -1
 done
 # --- v6.6 段已按爸爸指示移除（2026-09-13 03:2x：v6.6 不再作为对照跑）---

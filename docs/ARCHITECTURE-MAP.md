@@ -462,6 +462,41 @@ v6.7 69.9ms = FLA kernel 22.6ms(32%) + elementwise 35.3ms(50%) + 其余 12.0ms
 探针实测每层 >20MB 的模块输出：`drop` 0.25GiB×2（`xy_sparse` 宽张量）> `attn` 0.066GiB×2 > `ln` 0.0625GiB×2
 ⇒ **2 层的 drop 一项就 0.5GiB，超过 TF 整个前向（0.217GiB）**。同为宽张量布局所致，**可优化**（分块处理块内段）。
 
+
+### 2026-09-13 全仓清理（按爸爸指示：只留 v6+opt5 / v6.7 及对轰必需数据）
+
+**清理原则**：版本越多，读数越容易张冠李戴（本轮已发生一次"v6.7 对 TF 全面领先"的误读）。
+只留"能力最强（v6.7）"和"交付形态（v6+opt5）"两条线，加上对轰必需的基线。
+
+**模型 `dynfw/models/`：19 → 6 个**
+- 留：`fused_fw_gdn_fla.py`(v6.7) / `fused_fw_fw_cycle.py`(v6) / `fused_fw_fw_cycle_opt.py`(opt5) /
+  `transformer.py`(TF) / `fused_fw_gdn_cycle.py`(v6.6 — **v6.7 的 import 依赖，删了 v6.7 会断**) / `__init__.py`
+- 删 13：`bdh_gla{,v2,v3}.py` / `bdh_qwen.py` / `bdh_rawfw_qwen.py` / `fused_fw.py` /
+  `fused_fw_cycle.py` / `fused_fw_full{,_shared}.py` / `fused_fw_la.py` / `fused_fw_lin.py` /
+  `fused_fw_qwen.py` / `fused_fw_rec.py`
+
+**入口 `distill_qwen.py`**：22567 → 16255 字符；arch 分支 16 → 4 个
+（`fusedfw_fw_cycle` / `fusedfw_gdn_cycle` / `fusedfw_gdn_fla` / `tf`），
+`--arch` 默认值 `fusedfw` → `fusedfw_fw_cycle`（原默认指向已删模块）。
+
+**结果 `results/`：117 → 19 组，177.9GB → 62.3GB，实际释放 113GB**（含归档最终删除）
+- 留：`shared_B20`（教师 logits，重跑必需）+ `final_lt8192_flabf16_s*`(v6.7) +
+  `final_lt8192_v6_s*` + `final_lt8192_tf_s*` + `final_lt8192_flablock_s*`(归因臂) +
+  `lt8192opt5_fw_s*` + `lt8192opt5_tf_s*`
+
+**脚本**：`benchmarks/` 70 → 18；`experiments/distill/` 52 → 11；删除 `tmp_sync/`（旧副本）
+
+**验收（删归档前必须过）**：5/5 arch 冒烟通过
+```
+v6.7  params=45,188,098  ✓
+v6     params=45,187,072  ✓
+v6+opt5 params=45,187,072 ✓（loss 与 v6 逐位相同 ⇒ opt5 数学等价，符合 J1 预期）
+v6.6  params=45,188,098  ✓（v6.7 的依赖，必须留）
+tf    params=39,444,352  ✓
+```
+
+**可恢复性**：代码在 git（`902c090` 为清理前存档点）；结果数据与归档已删，但关键读数均在本台账内。
+
 ## 7. 已删除版本（2026-09-12，v7 / v8 / v5）
 
 | 版本 | 原文件 | 删除理由（实测证据） |

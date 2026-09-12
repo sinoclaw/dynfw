@@ -81,6 +81,16 @@ def make_student(args, teacher_vocab, device):
                               mlp_mult=args.mlp_mult, W=_w(args),
                               read_mode=getattr(args, 'fw_read', 'raw'))
 
+    elif args.arch == 'fusedfw_gdn_fla':
+        # v6.7 = v6.6 的门控记忆段换 FLA 的 fused_chunk_simple_gla（并行化顺序循环）。
+        # 注意：FLA 是逐 token 门控，v6.6 是块级门控 ⇒ 二者非等价，能力结论需分开记账。
+        from dynfw.models.fused_fw_gdn_fla import BDHBlockFLALM
+        m = BDHBlockFLALM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
+                          n_layer=args.n_layer, steps=args.cycle_steps,
+                          mlp_mult=args.mlp_mult, W=_w(args),
+                          read_mode=getattr(args, 'fw_read', 'raw'),
+                          gate_mode=getattr(args, 'fla_gate', 'token'))
+
     elif args.arch == 'fusedfw_full':
         m = FusedFWFull(D=args.dim, N=args.slots, k=args.k, nh=args.nh,
                         mlp_mult=args.mlp_mult, vocab=teacher_vocab,
@@ -151,7 +161,7 @@ def main():
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     ap = argparse.ArgumentParser()
-    ap.add_argument('--arch', type=str, default='fusedfw', choices=['fusedfw', 'fusedfw_cycle', 'fusedfw_rec', 'fusedfw_la', 'fusedfw_fw_cycle', 'fusedfw_gdn_cycle', 'fusedfw_full', 'fusedfw_full_shared', 'fusedfw_lin', 'bdh_gla', 'bdh_gla2', 'bdh_gla3', 'bdh', 'bdh_rawfw_qwen', 'tf'],
+    ap.add_argument('--arch', type=str, default='fusedfw', choices=['fusedfw', 'fusedfw_cycle', 'fusedfw_rec', 'fusedfw_la', 'fusedfw_fw_cycle', 'fusedfw_gdn_cycle', 'fusedfw_gdn_fla', 'fusedfw_full', 'fusedfw_full_shared', 'fusedfw_lin', 'bdh_gla', 'bdh_gla2', 'bdh_gla3', 'bdh', 'bdh_rawfw_qwen', 'tf'],
                     help='学生架构：fusedfw / fusedfw_rec / fusedfw_la / fusedfw_full(BDH完整) / bdh / tf')
     ap.add_argument('--teacher', type=str, default='Qwen/Qwen3-0.6B')
     ap.add_argument('--data', type=str, default='',  help='语料文本文件 (每行一行)')
@@ -182,6 +192,8 @@ def main():
     ap.add_argument('--dla-k', type=int, default=16, help='DLA状态槽容量K(设小如4可触发合并)')
     ap.add_argument('--fw-read', type=str, default='raw', choices=['softmax', 'raw'],
                     dest='fw_read', help='v6 块内读侧: softmax(原版) / raw(对齐 BDH 官方)')
+    ap.add_argument('--fla-gate', type=str, default='token', choices=['token', 'block'],
+                    help='[fusedfw_gdn_fla] 门控粒度: token=逐token(FLA原生)/block=块级(近似v6.6)')
     ap.add_argument('--w', type=int, default=0, dest='w',
                     help='块内窗口宽 W（0=用 block）。设小(如64)可让层内出现多个 chunk，'
                          '使跨 chunk 记忆在层内累积 —— 泄漏修复后各架构必须用同一 W 才可公平对比')

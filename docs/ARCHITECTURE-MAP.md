@@ -497,6 +497,63 @@ tf    params=39,444,352  ✓
 
 **可恢复性**：代码在 git（`902c090` 为清理前存档点）；结果数据与归档已删，但关键读数均在本台账内。
 
+
+## 4.2h torch 升级 2.5.1 → 2.7.1：解除 v6.7 + compile 的 triton 接口死锁（2026-09-13）
+
+### 问题（此前一直误判）
+此前多次对外表述"triton 3.3.1 破坏了 torch.compile、与 FLA 不能共存"，并据此提出"升级 torch"。
+**最初验证不充分**：只用 `torch.nn.Linear` 测 compile（不含 FLA kernel），显示 OK，于是错误地
+宣布"compile 本来就是好的"；接着又用单点实测得出"compile 对 v6.7 无事可做（70.5→70.5ms）"，
+并据wrong结论取消了升级。**两次都是验证设计不覆盖真实路径。**
+
+### 真正根因（`torch._dynamo.explain` 定位）
+```
+InternalTorchDynamoError: AttributeError: 'Autotuner' object has no attribute 'reset_idx'
+  from user code:
+    fla/ops/common/fused_chunk.py:563  →  o, ht = fused_chunk_fwd(...)
+    triton/runtime/autotuner.py:395    →  self.fn.run(...)
+```
+`torch 2.5.1` 的 `triton_kernel_wrap.py` 期待旧版 triton 的 `Autotuner` 接口；triton 3.3.1 的
+`Autotuner` 无 `reset_idx` ⇒ **图里只要含 FLA kernel，compile 就抛异常并整体退回 eager**。
+（所以 v6+opt5 不受影响 —— 它没有 FLA kernel。）
+
+### 版本选择（查 PyPI metadata 定版，非盲升）
+```
+torch 2.6.0 → triton==3.2.0
+torch 2.7.0 → triton==3.3.0
+torch 2.7.1 → triton==3.3.1   ← 正好等于已装版本，故 triton 无需变动
+torch 2.8.0 → triton==3.4.0
+```
+
+### 执行与验收（判据跑前锁死）
+升级：`torch 2.5.1+cu124 → 2.7.1+cu126`；triton 保持 `3.3.1`；附带 CUDA 运行库 12.4→12.6
+（cudnn 9.1→9.5、cublas 12.4→12.6、nccl 2.21→2.26 等）。
+| 判据 | 结果 |
+|---|---|
+| J1 v6.7 + compile 出图 | **✓ 不再抛 Autotuner 异常** |
+| J3 v6.7 速度 eager → compile | **69.7ms → 51.4ms（快 1.36×）** |
+| J4 FLA 冒烟 | ✓ |
+| J5 v6 / v6+opt5 读数 | 962.3 / 56.9ms（参照 953 / 56.9，未漂移） |
+| J6 快照 + 回滚脚本 | ✓ `docs/env-snapshot-pre-torch-upgrade-20260913.txt` + `scripts/rollback_torch.sh` |
+
+### 局面变化（重要）
+| | 能力（长T中位） | 速度 T=8192 | 显存 |
+|---|---|---|---|
+| **v6.7 + compile** | **5738.0** | **51.4ms** | 5.13GiB |
+| v6.7 eager | 5738.0 | 69.7ms | 5.13GiB |
+| v6+opt5 | 8260.9 | 56.9ms | 5.99GiB |
+| TF | 19734.9 | **45.4ms** | **0.95GiB** |
+
+**"能力最强"与"自家最快"首次合并**：v6.7+compile 的 51.4ms 快于 v6+opt5 的 56.9ms（1.11×），
+不再需要在能力与速度之间二选一。相对 TF 的速度差由 **1.52× 缩至 1.13×**（仍未反超）。
+⇒ **谁更快取决于 T**：T=8192 是 TF flash attention 最舒服的区间（且不物化 T² 矩阵），
+TF 的 O(T²) 代价要到更长 T 才显形 ⇒ 交叉点待测（`benchmarks/bench_sweep_T_v67c_vs_tf.py`）。
+
+### 诚实标注
+1. **J2（能力不损）尚待长 T 重跑确认** —— compile 只改计算图不改数学，但按军规不以口头担保代替实测
+2. **速度仍输 TF 1.13×**（T=8192）；显存仍输 5.38×；TF 参数仍少 14.6%
+3. **compile 读数依赖编译前 warmup**（台账既有铁律），本脚本对每个 (arch,T) 用独立进程 + 显式 eager 预跑
+
 ## 7. 已删除版本（2026-09-12，v7 / v8 / v5）
 
 | 版本 | 原文件 | 删除理由（实测证据） |

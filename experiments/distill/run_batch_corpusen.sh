@@ -1,5 +1,4 @@
 #!/bin/bash
-# corpus_en 正确口径批量对轰: v6修复/bdh/la_cycle 各 seed0-2, raw分块/v7DLA 各 seed0
 cd /data/dynfw
 PY=/data/dynfw-env/bin/python
 export PYTHONPATH=/data/dynfw
@@ -7,8 +6,6 @@ D="--block 256 --batch 4 --max-batches 40 --epochs 20 --dim 128 --nh 16 --n-laye
 for sd in 0 1 2; do
   $PY experiments/distill/distill_qwen.py --arch fusedfw_fw_cycle $D --seed $sd --out /data/dynfw/results/v6fix_corpusen_s$sd
   $PY experiments/distill/distill_qwen.py --arch bdh              $D --seed $sd --out /data/dynfw/results/bdh_corpusen_s$sd
-  $PY experiments/distill/distill_qwen.py --arch fusedfw_la_cycle $D --seed $sd --out /data/dynfw/results/lacycle_corpusen_s$sd
 done
 $PY experiments/distill/distill_qwen.py --arch bdh_rawfw_qwen  $D --seed 0 --out /data/dynfw/results/rawfw_corpusen_s0
-$PY experiments/distill/distill_qwen.py --arch fusedfw_dla_cycle $D --seed 0 --dla-k 8 --dla-w 64 --out /data/dynfw/results/dla_corpusen_s0
 echo DONE_BATCH

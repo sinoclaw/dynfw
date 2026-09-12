@@ -23,7 +23,6 @@ from dynfw.models.fused_fw_qwen import FusedFWQwen          # 学生 A（无时�
 from dynfw.models.fused_fw_cycle import FusedFWCYBLE          # 学生 A-cyc（循环潜推理,吸收BDH-CQ）
 from dynfw.models.fused_fw_rec import FusedFWRecurrent      # 学生 A'（方向A：递推rho保留顺序）
 from dynfw.models.fused_fw_la import FusedFWLa              # 学生 A''（吸收BDH：内容寻址因果读取）
-from dynfw.models.fused_fw_la_cycle import BDHBlockCycleLM    # 学生 A''-cyc（K-is-Q 保顺序 + 循环潜推理）
 
 
 from dynfw.models.fused_fw_full import FusedFWFull                  # 学生 D（BDH 完整机制分)
@@ -66,10 +65,6 @@ def make_student(args, teacher_vocab, device):
     elif args.arch == 'fusedfw_la':
         m = FusedFWLa(D=args.dim, N=args.slots, k=args.k, nh=args.nh,
                       vocab=teacher_vocab, use_ffn=True, n_layer=args.n_layer)
-    elif args.arch == 'fusedfw_la_cycle':
-        m = BDHBlockCycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
-                            n_layer=args.n_layer, steps=args.cycle_steps,
-                            mlp_mult=args.mlp_mult)
 
     elif args.arch == 'fusedfw_fw_cycle':
         from dynfw.models.fused_fw_fw_cycle import BDHBlockFWCycleLM
@@ -132,6 +127,17 @@ def make_student(args, teacher_vocab, device):
     return m, m.np()
 
 
+def apply_opt5(m, arch):
+    """把 v6 的块内注意换成 opt5_raw 融合形态（与基线数学等价，J1 已验证）。"""
+    from dynfw.models.fused_fw_fw_cycle_opt import to_opt5_raw
+    assert arch == 'fusedfw_fw_cycle', f'--opt5 目前仅支持 fusedfw_fw_cycle，收到 {arch}'
+    to_opt5_raw(m, strict_bf16=True, bf16_prefix=False)
+    cls = type(m.blocks[0].attn).__name__
+    assert cls == 'FWAttentionOpt5Raw', f'替换失败: {cls}'
+    print(f'=== opt5_raw 融合形态已启用（attn={cls}）===')
+    return m
+
+
 def kl_loss(student_logits, teacher_logits, temperature=1.0):
     """logits 蒸馏 KL 损失（soft labels）。"""
     s = F.log_softmax(student_logits / temperature, dim=-1)
@@ -150,10 +156,15 @@ def main():
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     ap = argparse.ArgumentParser()
-    ap.add_argument('--arch', type=str, default='fusedfw', choices=['fusedfw', 'fusedfw_cycle', 'fusedfw_rec', 'fusedfw_la', 'fusedfw_la_cycle', 'fusedfw_fw_cycle', 'fusedfw_vla_cycle', 'fusedfw_gdn_cycle', 'fusedfw_full', 'fusedfw_full_shared', 'fusedfw_lin', 'bdh_gla', 'bdh_gla2', 'bdh_gla3', 'bdh', 'bdh_rawfw_qwen', 'tf'],
+    ap.add_argument('--arch', type=str, default='fusedfw', choices=['fusedfw', 'fusedfw_cycle', 'fusedfw_rec', 'fusedfw_la', 'fusedfw_fw_cycle', 'fusedfw_vla_cycle', 'fusedfw_gdn_cycle', 'fusedfw_full', 'fusedfw_full_shared', 'fusedfw_lin', 'bdh_gla', 'bdh_gla2', 'bdh_gla3', 'bdh', 'bdh_rawfw_qwen', 'tf'],
                     help='学生架构：fusedfw / fusedfw_rec / fusedfw_la / fusedfw_full(BDH完整) / bdh / tf')
     ap.add_argument('--teacher', type=str, default='Qwen/Qwen3-0.6B')
-    ap.add_argument('--data', type=str, required=True, help='语料文本文件 (每行一行)')
+    ap.add_argument('--data', type=str, default='',  help='语料文本文件 (每行一行)')
+    ap.add_argument('--data-bin', type=str, default='', dest='data_bin',
+                    help='已 tokenized 的 .bin（uint32/uint16，长 T 用）：按 --block 切块。'
+                         '与 --data 二选一；必须用教师同词表的 tokenizer 生成（见 prep_corpus_qwen.py）')
+    ap.add_argument('--bin-dtype', type=str, default='uint32', dest='bin_dtype',
+                    choices=['uint32', 'uint16', 'int32'])
     ap.add_argument('--out', type=str, default='/data/dynfw/results/distill_qwen')
     ap.add_argument('--max-lines', type=int, default=2000)
     ap.add_argument('--block', type=int, default=256)
@@ -194,6 +205,10 @@ def main():
     ap.add_argument('--chunk', type=int, default=0,
                     help='沿 T 分块算 KL 的块大小（>0 启用分块路径；每次只物化 chunk×V 的 logits，'
                          '实测 V=152K/B=8/T=1024 下峰值 33GiB->7GiB）。0=原全量路径')
+    ap.add_argument('--snap-every', type=int, default=0,
+                    help='每 N 个 step 记录一次 loss 快照（0=关闭）→ 一个 run 出整条曲线')
+    ap.add_argument('--opt5', action='store_true',
+                    help='v6 用 opt5_raw 融合实现（= 交付形态；与基线数学等价，J1 已验 logits maxdiff<=8.35e-07）')
     ap.add_argument('--seed', type=int, default=0)
     args = ap.parse_args()
 
@@ -206,11 +221,25 @@ def main():
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
     print(f"=== tokenizer vocab_size: {tok.vocab_size} ===")
-    with open(args.data) as f:
-        lines = [l.strip() for l in f if l.strip()][:args.max_lines]
-    ids = tok(lines, return_tensors='pt', padding=True, truncation=True,
-              max_length=args.block)['input_ids']
-    print(f"=== data tensor: {ids.shape} ===")
+    if args.data_bin:
+        # 长 T 路径：从 tokenized .bin 切块（必须教师同词表，见 prep_corpus_qwen.py）
+        import numpy as np
+        dt = {'uint32': np.uint32, 'uint16': np.uint16, 'int32': np.int32}[args.bin_dtype]
+        arr = np.fromfile(args.data_bin, dtype=dt)
+        n = len(arr) // args.block
+        if args.max_batches > 0:
+            n = min(n, args.max_batches * args.batch)
+        arr = arr[:n * args.block].astype(np.int64)
+        ids = torch.from_numpy(arr).view(n, args.block)
+        print(f"=== data tensor(bin): {ids.shape}  (T={args.block}, 块数={n}, "
+              f"来源={args.data_bin}, dtype={args.bin_dtype}) ===")
+    else:
+        assert args.data, '必须提供 --data 或 --data-bin'
+        with open(args.data) as f:
+            lines = [l.strip() for l in f if l.strip()][:args.max_lines]
+        ids = tok(lines, return_tensors='pt', padding=True, truncation=True,
+                  max_length=args.block)['input_ids']
+        print(f"=== data tensor: {ids.shape} ===")
 
     # 2. 教师预计算 logits（固定，两学生共用同一份）
     teacher = AutoModelForCausalLM.from_pretrained(
@@ -218,6 +247,12 @@ def main():
     teacher.eval()
     teacher_vocab = teacher.config.vocab_size
     print(f"=== teacher config: {teacher.config.hidden_size} dim, {teacher_vocab} vocab ===")
+    if args.data_bin:
+        mx = int(ids.max().item())
+        assert mx < teacher_vocab, (
+            f'词表不匹配！数据 token max={mx} >= 教师词表 {teacher_vocab}。'
+            f'请用教师同词表 tokenizer 重新生成 .bin（experiments/distill/prep_corpus_qwen.py）')
+        print(f"=== token 越界检查: max={mx} < 教师词表 {teacher_vocab}  OK ===")
 
     os.makedirs(args.out, exist_ok=True)
     logits_dir = os.path.join(args.out, 'teacher_logits')
@@ -227,7 +262,8 @@ def main():
         shared_npy = os.path.join(args.shared_logits, 'teacher_logits.npy')
         if os.path.exists(shared_npy):
             import numpy as np
-            t_arr = np.load(shared_npy)
+            # mmap：大 logits（如 20 块 = 50GB）不全量进 RAM（本机 125GB），逐 batch 按需读
+            t_arr = np.load(shared_npy, mmap_mode='r')
             print(f"=== reuse shared teacher logits: {t_arr.shape} ===")
     if t_arr is None:
         x = ids.to(device)
@@ -242,6 +278,7 @@ def main():
         t_arr = np.concatenate(teacher_logits_all, axis=0)
         os.makedirs(logits_dir, exist_ok=True)
         np.save(os.path.join(logits_dir, 'teacher_logits.npy'), t_arr)
+        # 注：同配置多 seed 的 logits 完全相同 —— 批量实验请用 --shared-logits 只存一份
         # 存到共享目录供后续复用
         if args.shared_logits:
             os.makedirs(args.shared_logits, exist_ok=True)
@@ -257,10 +294,13 @@ def main():
     import time
     t0 = time.time()
     student, n_params = make_student(args, teacher_vocab, device)
+    if getattr(args, 'opt5', False):
+        student = apply_opt5(student, args.arch)
     student = student.to(device)
     print(f"=== student({args.arch}) params: {n_params} ===")
 
     losses = []
+    snaps = []
     peak_gib = 0.0
     if device == 'cuda':
         torch.cuda.reset_peak_memory_stats()
@@ -292,6 +332,11 @@ def main():
                 loss = kl_loss(s_lg.float(), t_lg, args.temperature)
             opt.zero_grad(); loss.backward(); opt.step()
             losses.append(loss.item())
+            if args.snap_every > 0 and len(losses) % args.snap_every == 0:
+                _k = len(losses)
+                _w = args.snap_every if _k >= 2 * args.snap_every else _k
+                snaps.append({'step': _k, 'loss_mean_recent': float(np.mean(losses[-_w:])),
+                              'loss_instant': float(losses[-1])})
             if device == 'cuda':
                 peak_gib = max(peak_gib, torch.cuda.max_memory_allocated() / 2 ** 30)
             if len(losses) % 20 == 0:
@@ -314,6 +359,8 @@ def main():
         'ppl_est': ppl, 'wall_sec': wall, 'blocks': batch_x.size(0),
         'chunk': args.chunk, 'peak_gib': round(peak_gib, 2),
         'teacher_half': bool(args.teacher_half), 'teacher_dtype': str(t_lg.dtype),
+        'snap_every': args.snap_every, 'snapshots': snaps,
+        'total_steps': len(losses),
     }
     with open(os.path.join(args.out, 'distill_result.json'), 'w') as f:
         json.dump(result, f, indent=2)

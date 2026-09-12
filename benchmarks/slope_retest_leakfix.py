@@ -9,7 +9,6 @@ import torch
 
 from dynfw.models.fused_fw_fw_cycle import BDHBlockFWCycleLM
 from dynfw.models.fused_fw_gdn_cycle import BDHBlockGDNCycleLM
-from dynfw.models.fused_fw_la_cycle import BDHBlockCycleLM
 from dynfw.models.transformer import TF_sdpa
 
 DEV = 'cuda'
@@ -54,6 +53,5 @@ Ts = [1024, 2048, 4096, 8192]
 print('=== 复杂度斜率复验（log-log；O(T)≈1.0 / O(T²)≈2.0）===', flush=True)
 probe('v6 fw_cycle (W=64)', lambda: BDHBlockFWCycleLM(**KW), Ts)
 probe('v6.6 gdn_cycle (W=64)', lambda: BDHBlockGDNCycleLM(**KW), Ts)
-probe('v5 la_cycle (预期 O(T²))', lambda: BDHBlockCycleLM(**{k: v for k, v in KW.items() if k != 'W'}), Ts)
 probe('TF_sdpa (预期 O(T²))', lambda: TF_sdpa(D=128, nh=16, n_layer=2, vocab=151936, maxT=8192), Ts)
 print('=== 复验结束 ===', flush=True)

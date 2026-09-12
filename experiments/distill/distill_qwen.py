@@ -186,9 +186,6 @@ def main():
                     help='块内窗口宽 W（0=用 block）。设小(如64)可让层内出现多个 chunk，'
                          '使跨 chunk 记忆在层内累积 —— 泄漏修复后各架构必须用同一 W 才可公平对比')
     ap.add_argument('--dla-w', type=int, default=0, help='DLA块宽W(0则=block; 设小如64可在序列内多块触发合并)')
-    ap.add_argument('--read-mode', type=str, default='softmaxK',
-                    choices=['sum', 'softmax', 'softmaxK', 'topk'],
-                    help='v8 fusedfw_slot_topk 读侧聚合: sum(原版v7无差别求和)/softmax(尺度稳定)/softmaxK(尺度对齐)/topk(稀疏)')
     ap.add_argument('--slot-topk', type=int, default=2, dest='slot_topk',
                     help='v8 read_mode=topk 时选择的槽数 k')
     ap.add_argument('--dk', type=int, default=32, help='GLA 线性注意力 head 状态宽 dk')
@@ -348,7 +345,10 @@ def main():
         'dim': args.dim, 'slots': args.slots, 'k': args.k, 'n_layer': args.n_layer,
         'nh': args.nh, 'epochs': args.epochs, 'seed': args.seed,
         'dla_k': getattr(args, 'dla_k', None), 'dla_w': getattr(args, 'dla_w', None), 'block': args.block,
-        'read_mode': getattr(args, 'read_mode', None), 'slot_topk': getattr(args, 'slot_topk', None),
+        # 实际生效的块内读侧（--fw-read）。注意：曾有一处 'read_mode' 记录的是 v8 槽选择参数
+        # （--read-mode，默认 softmaxK）而非真实读侧，会误导审计，已删除该字段。
+        'fw_read': getattr(args, 'fw_read', None),
+        'slot_topk': getattr(args, 'slot_topk', None),
         'cycle_steps': args.cycle_steps, 'mlp_mult': args.mlp_mult,
         'final_loss': final_loss, 'mean_loss': mean_loss,
         'ppl_est': ppl, 'wall_sec': wall, 'blocks': batch_x.size(0),

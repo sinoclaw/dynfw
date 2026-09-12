@@ -88,7 +88,8 @@ def make_student(args, teacher_vocab, device):
         from dynfw.models.fused_fw_gdn_cycle import BDHBlockGDNCycleLM
         m = BDHBlockGDNCycleLM(D=args.dim, nh=args.nh, vocab=teacher_vocab,
                               n_layer=args.n_layer, steps=args.cycle_steps,
-                              mlp_mult=args.mlp_mult, W=_w(args))
+                              mlp_mult=args.mlp_mult, W=_w(args),
+                              read_mode=getattr(args, 'fw_read', 'raw'))
 
     elif args.arch == 'fusedfw_full':
         m = FusedFWFull(D=args.dim, N=args.slots, k=args.k, nh=args.nh,

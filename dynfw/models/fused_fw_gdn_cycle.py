@@ -23,8 +23,10 @@ def get_freqs(n, theta, dtype):
 
 class GDNFastAttn(nn.Module):
     """块内精确注意(窗口W) + Gated DeltaNet 门控衰减 fast-weight 记忆。唯一单变量改动。"""
-    def __init__(self, config):
+    def __init__(self, config, read_mode='raw'):
         super().__init__()
+        # read_mode: 'raw' = 对齐 BDH-CQ 官方/v6 新默认; 'softmax' = v6.6 原版
+        self.read_mode = read_mode
         self.config = config
         nh = config.n_head
         D = config.n_embd
@@ -67,9 +69,13 @@ class GDNFastAttn(nn.Module):
             v_c = V[:, :, st:en]           # [B,1,w,D]
             w = en - st
             sim = q_c @ k_c.mT              # [B,nh,w,w]
-            causal = torch.tril(torch.ones(w, w, device=Q.device, dtype=torch.bool), diagonal=0)
-            sim = sim.masked_fill(~causal, float('-inf'))
-            attn = torch.softmax(sim.float(), dim=-1)
+            if self.read_mode == 'raw':
+                # raw 块内（对齐 BDH-CQ 官方 / v6 新默认）：mask=0 真 0、diagonal=-1 不看自己、不做 softmax
+                causal = torch.tril(torch.ones(w, w, device=Q.device, dtype=torch.bool), diagonal=-1)
+                attn = sim.masked_fill(~causal, 0.0)
+            else:
+                causal = torch.tril(torch.ones(w, w, device=Q.device, dtype=torch.bool), diagonal=0)
+                attn = torch.softmax(sim.masked_fill(~causal, float('-inf')).float(), dim=-1)
             agg = attn @ v_c                 # [B,nh,w,D]
             if new_mem is not None and (st > 0 or memories is not None):
                 retr = torch.einsum('bhwd,bhde->bhwe', q_c.float(), new_mem.float())
@@ -96,14 +102,14 @@ class Config:
 
 class BDHBlockGDNCycle(nn.Module):
     """v6.6: 与 v6 BDHBlockFWCycle 完全一致, 唯一差异 = attn 用 GDNFastAttn(门控衰减)。"""
-    def __init__(self, D, nh, mlp_mult, vocab, steps=1, W=512):
+    def __init__(self, D, nh, mlp_mult, vocab, steps=1, W=512, read_mode='raw'):
         super().__init__()
         cfg = Config(1, D, nh, mlp_mult, vocab)
         self.config = cfg; self.D = D; self.vocab = vocab; self.steps = steps; self.W = W
         N = mlp_mult * D // nh
         self.decoder = nn.Parameter(torch.zeros((nh * N, D)).normal_(std=0.02))
         self.encoder = nn.Parameter(torch.zeros((nh, D, N)).normal_(std=0.02))
-        self.attn = GDNFastAttn(cfg)
+        self.attn = GDNFastAttn(cfg, read_mode=read_mode)
         self.ln = nn.LayerNorm(D, elementwise_affine=False, bias=False)
         self.drop = nn.Dropout(0.0)
         self.encoder_v = nn.Parameter(torch.zeros((nh, D, N)).normal_(std=0.02))
@@ -147,12 +153,14 @@ class BDHBlockGDNCycle(nn.Module):
 
 class BDHBlockGDNCycleLM(nn.Module):
     """LM 封装: embed -> BDHBlockGDNCycle -> head。"""
-    def __init__(self, D=128, nh=4, vocab=151936, n_layer=1, steps=1, mlp_mult=128, W=512):
+    def __init__(self, D=128, nh=4, vocab=151936, n_layer=1, steps=1, mlp_mult=128, W=512,
+                 read_mode='raw'):
         super().__init__()
         self.D = D; self.nh = nh; self.vocab = vocab; self.n_layer = n_layer; self.steps = steps; self.W = W
         self.e = nn.Embedding(vocab, D)
         self.ln = nn.LayerNorm(D, elementwise_affine=False, bias=False)
-        self.blocks = nn.ModuleList([BDHBlockGDNCycle(D, nh, mlp_mult, vocab, steps=steps, W=W)
+        self.blocks = nn.ModuleList([BDHBlockGDNCycle(D, nh, mlp_mult, vocab, steps=steps, W=W,
+                                                     read_mode=read_mode)
                                      for _ in range(n_layer)])
         self.head = nn.Linear(D, vocab, bias=False)
         self.apply(self._init_weights)

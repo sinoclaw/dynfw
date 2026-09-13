@@ -693,3 +693,24 @@ A800 软件上可行（vLLM 用 Marlin kernel 支持 Ampere 的 weight-only FP8�
 - 官方明确 *"This may degrade performance"*；Transformer Engine 源码 `check_fp8_support()` 要求 cc ≥ 8.9 才能 FP8 **execution**
 - **我们权重仅占 0.17 GiB / 5.13 GiB（3%）**，压一半只省 0.085 GiB，且反量化增加开销 ⇒ **负收益**
 - 激活占 93%，而激活 FP8（W8A8）需要硬件 ⇒ A800 无路
+
+### 4.2l 布局优化的真实边界 + share_qk（2026-09-13，含对上一节的估算更正）
+
+**⚠️ 更正 §4.2k**：那里我估「布局 fuse 可省 ~0.5 GiB」。**实测代码后该估算不成立**，原因：
+`BDHBlockFLA.encoder` 形状是 `[nh, D, N]`（`nn.Parameter`），`x[...,D] @ encoder` 广播后**本来就产出
+`[B,nh,T,N]`** —— 也就是说 **block 内部本来就是这个布局，"改成 [B,T,nh,N] 直出"需要改 encoder 形状，
+而那会让已训练权重作废**（违反「改动须保证已训权重/成果不作废」）。
+
+**真实可省的两处（本轮做掉一处）**
+1. **q_f / k_f 复用**（本轮，`--share-qk`）：代码里 `KR = QR`（`K is Q` 已在入口 `assert K is Q`），
+   但 `q_f` 和 `k_f` 各自做了一次 `permute(0,2,1,3).contiguous().to(bf16)` —— **同一份数据搬了两遍**。
+   查 FLA 源码（`fla/ops/common/fused_chunk.py`）确认安全性：
+   - 前向 kernel 只读 `b_q`/`b_k`（tile 局部副本），只 `tl.store(p_o, ...)`
+   - `FusedChunkFunction.forward` 用 `ctx.save_for_backward(q, k, ...)` —— 同张只存一份引用
+   - backward 用 `torch.empty_like(q)`/`empty_like(k)` 新建 `dq`/`dk`，不原地写；`q is k` 时梯度正确累加
+   ⇒ **复用安全**。省一次 `[B,T,nh,N]` bf16（≈134MB 瞬时）+ 一次全量搬运与类型转换。
+2. **RoPE**（§4.2k 已做，`--rope-fast`）：省掉 `torch.stack` 分配。
+
+**修正后的收益预期**：布局类优化合计约 **0.13~0.25 GiB**（不是我先前说的 0.5 GiB）；
+剩余大头（FLA 反向 1.75 GiB = 37%）是结构代价，改不动。
+**这不改变总方向，但把数字校准**：`4.746 →grad_ckpt→ 3.302 →rope+share_qk→ ~3.0 →bf16→ ~1.5 GiB`。

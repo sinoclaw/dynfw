@@ -37,7 +37,7 @@ class GDNFastAttnFLA(nn.Module):
     """
 
     def __init__(self, config, read_mode='raw', gate_mode='token', chunk=64, chunk_self=0,
-                 rope_fast=False):
+                 rope_fast=False, share_qk=False):
         super().__init__()
         if not _FLA_OK:
             raise RuntimeError('flash-linear-attention 不可用（需要 fla.ops.simple_gla.fused_chunk）')
@@ -49,6 +49,9 @@ class GDNFastAttnFLA(nn.Module):
         self.chunk_self = chunk_self
         # rope_fast=True：用切片赋值版 RoPE（省一次 stack 分配，数学等价）。默认 False 保原行为。
         self._rope_fast = rope_fast
+        # share_qk=True：q_f 与 k_f 复用同一张张量（K is Q，FLA kernel 只读输入）。
+        # 省掉一次 permute+contiguous+bf16 转换（约 134MB bf16 + 一次全量搬运）。默认 False。
+        self._share_qk = share_qk
         self.config = config
         nh = config.n_head
         D = config.n_embd
@@ -123,7 +126,10 @@ class GDNFastAttnFLA(nn.Module):
         #    而我们的对照形态 opt5 本身就是 bf16(strict_bf16=True) ⇒ 让 FLA 也走 bf16
         #    才是真正的同口径。代价是 FLA 段引入 bf16 数值误差，须重跑长 T 验证能力不损。
         q_f = QR.permute(0, 2, 1, 3).contiguous().to(torch.bfloat16)                 # [B,T,nh,N]
-        k_f = KR.permute(0, 2, 1, 3).contiguous().to(torch.bfloat16)
+        # KR is QR（K is Q 已在入口 assert）。FLA kernel 只读 q/k、反向新建 dq/dk，
+        # 且 save_for_backward 对同一张只存一份 ⇒ 复用安全，省一次搬运+转换。
+        k_f = (q_f if self._share_qk
+               else KR.permute(0, 2, 1, 3).contiguous().to(torch.bfloat16))
         v_f = V.expand(-1, nh, -1, -1).permute(0, 2, 1, 3).contiguous().to(torch.bfloat16)  # [B,T,nh,D]
         g_f = g.permute(0, 2, 1).contiguous().to(torch.bfloat16)                     # [B,T,nh]
 
@@ -165,7 +171,8 @@ class BDHBlockFLA(nn.Module):
     """与 BDHBlockGDNCycle 完全一致，唯一差异 = attn 用 GDNFastAttnFLA。"""
 
     def __init__(self, D, nh, mlp_mult, vocab, steps=1, W=512, read_mode='raw',
-                 gate_mode='token', chunk=64, grad_ckpt=False, chunk_self=0, rope_fast=False):
+                 gate_mode='token', chunk=64, grad_ckpt=False, chunk_self=0, rope_fast=False,
+                 share_qk=False):
         super().__init__()
         from dynfw.models.fused_fw_gdn_cycle import Config
         cfg = Config(1, D, nh, mlp_mult, vocab)
@@ -174,7 +181,7 @@ class BDHBlockFLA(nn.Module):
         self.decoder = nn.Parameter(torch.zeros((nh * N, D)).normal_(std=0.02))
         self.encoder = nn.Parameter(torch.zeros((nh, D, N)).normal_(std=0.02))
         self.attn = GDNFastAttnFLA(cfg, read_mode=read_mode, gate_mode=gate_mode, chunk=chunk,
-                                   chunk_self=chunk_self, rope_fast=rope_fast)
+                                   chunk_self=chunk_self, rope_fast=rope_fast, share_qk=share_qk)
         # 梯度检查点：为反向保存的 [B,nh,T,N] 激活改为反向时重算（数学精确等价，代价是前向多算一次）
         self.grad_ckpt = grad_ckpt
         self.ln = nn.LayerNorm(D, elementwise_affine=False, bias=False)
@@ -227,7 +234,7 @@ class BDHBlockFLALM(nn.Module):
 
     def __init__(self, D=128, nh=4, vocab=151936, n_layer=1, steps=1, mlp_mult=128, W=512,
                  read_mode='raw', gate_mode='token', chunk=64, grad_ckpt=False, chunk_self=0,
-                 rope_fast=False):
+                 rope_fast=False, share_qk=False):
         super().__init__()
         self.D = D; self.nh = nh; self.vocab = vocab; self.n_layer = n_layer
         self.steps = steps; self.W = W
@@ -236,7 +243,7 @@ class BDHBlockFLALM(nn.Module):
         self.blocks = nn.ModuleList([BDHBlockFLA(D, nh, mlp_mult, vocab, steps=steps, W=W,
                                                  read_mode=read_mode, gate_mode=gate_mode, chunk=chunk,
                                                  grad_ckpt=grad_ckpt, chunk_self=chunk_self,
-                                                 rope_fast=rope_fast)
+                                                 rope_fast=rope_fast, share_qk=share_qk)
                                      for _ in range(n_layer)])
         self.head = nn.Linear(D, vocab, bias=False)
         self.apply(self._init_weights)

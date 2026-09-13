@@ -64,7 +64,9 @@ def make_student(args, teacher_vocab, device):
                           n_layer=args.n_layer, steps=args.cycle_steps,
                           mlp_mult=args.mlp_mult, W=_w(args),
                           read_mode=getattr(args, 'fw_read', 'raw'),
-                          gate_mode=getattr(args, 'fla_gate', 'token'))
+                          gate_mode=getattr(args, 'fla_gate', 'token'),
+                          grad_ckpt=getattr(args, 'grad_ckpt', False),
+                          chunk_self=getattr(args, 'chunk_self', 0))
 
     elif args.arch == 'tf':
         m = TF_sdpa(D=args.dim, nh=args.nh, n_layer=args.n_layer,
@@ -134,6 +136,10 @@ def main():
     ap.add_argument('--dla-k', type=int, default=16, help='DLA状态槽容量K(设小如4可触发合并)')
     ap.add_argument('--fw-read', type=str, default='raw', choices=['softmax', 'raw'],
                     dest='fw_read', help='v6 块内读侧: softmax(原版) / raw(对齐 BDH 官方)')
+    ap.add_argument('--chunk-self', type=int, default=0, dest='chunk_self',
+                    help='把 self 项 (q·k)v 按 T 分块计算（如 1024），避免整段物化 [B,nh,T,N]；0=关闭')
+    ap.add_argument('--grad-ckpt', action='store_true', dest='grad_ckpt',
+                    help='对 v6.7 的 BDH block 启用梯度检查点：不常驻中间激活，反向时重算（数学等价，显存大降，前向约 +33%）')
     ap.add_argument('--fla-gate', type=str, default='token', choices=['token', 'block'],
                     help='[fusedfw_gdn_fla] 门控粒度: token=逐token(FLA原生)/block=块级(近似v6.6)')
     ap.add_argument('--w', type=int, default=0, dest='w',

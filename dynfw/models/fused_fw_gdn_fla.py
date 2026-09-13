@@ -36,13 +36,16 @@ class GDNFastAttnFLA(nn.Module):
     参数与 GDNFastAttn 完全一致（gate: Linear(N,1)），保证权重可互转、可同 seed 对照。
     """
 
-    def __init__(self, config, read_mode='raw', gate_mode='token', chunk=64):
+    def __init__(self, config, read_mode='raw', gate_mode='token', chunk=64, chunk_self=0):
         super().__init__()
         if not _FLA_OK:
             raise RuntimeError('flash-linear-attention 不可用（需要 fla.ops.simple_gla.fused_chunk）')
         self.read_mode = read_mode
         self.gate_mode = gate_mode          # 'block' = 与 v6.6 等价；'token' = 解锁的升级
         self.chunk = chunk                   # FLA 内部分块粒度（建议 64；影响速度不影响语义）
+        # chunk_self>0：把 self 项（(q·k)v）按 T 分块计算，避免整段物化 [B,nh,T,N]。
+        # 只改计算顺序（fp32 累加顺序变化），不改数学；0 = 关闭（原行为）。
+        self.chunk_self = chunk_self
         self.config = config
         nh = config.n_head
         D = config.n_embd
@@ -121,9 +124,22 @@ class GDNFastAttnFLA(nn.Module):
         new_mem = new_mem.float()
 
         # ---- 精确减掉 self 项 (q_t·k_t)·v_t，对齐 v6.6 的 diagonal=-1 ----
-        self_dot = (QR.float() * KR.float()).sum(dim=-1, keepdim=True)     # [B,nh,T,1]
-        self_term = (self_dot * V.float())                                 # [B,nh,T,D]（V 广播到 nh）
-        out = o.permute(0, 2, 1, 3).float() - self_term                    # [B,nh,T,D]
+        if self.chunk_self and self.chunk_self < T:
+            # 分块版：临时量从 [B,nh,T,N] 降到 [B,nh,CH,N]，峰值显著下降。
+            # 数学与整段版相同（仅 fp32 累加顺序不同）。
+            CS = self.chunk_self
+            Vf = V.float()
+            out = o.permute(0, 2, 1, 3).float()                            # [B,nh,T,D]（输出本身必须完整）
+            for t0 in range(0, T, CS):
+                t1 = min(t0 + CS, T)
+                qc = QR[:, :, t0:t1]
+                kc = KR[:, :, t0:t1]
+                dot = (qc.float() * kc.float()).sum(dim=-1, keepdim=True)   # [B,nh,cs,1]
+                out[:, :, t0:t1] -= dot * Vf[:, :, t0:t1]                   # 原地减，不再额外物化
+        else:
+            self_dot = (QR.float() * KR.float()).sum(dim=-1, keepdim=True)  # [B,nh,T,1]
+            self_term = (self_dot * V.float())                              # [B,nh,T,D]（V 广播到 nh）
+            out = o.permute(0, 2, 1, 3).float() - self_term                 # [B,nh,T,D]
 
         return out.to(Q.dtype), new_mem
 
@@ -132,7 +148,7 @@ class BDHBlockFLA(nn.Module):
     """与 BDHBlockGDNCycle 完全一致，唯一差异 = attn 用 GDNFastAttnFLA。"""
 
     def __init__(self, D, nh, mlp_mult, vocab, steps=1, W=512, read_mode='raw',
-                 gate_mode='token', chunk=64):
+                 gate_mode='token', chunk=64, grad_ckpt=False, chunk_self=0):
         super().__init__()
         from dynfw.models.fused_fw_gdn_cycle import Config
         cfg = Config(1, D, nh, mlp_mult, vocab)
@@ -140,7 +156,10 @@ class BDHBlockFLA(nn.Module):
         N = mlp_mult * D // nh
         self.decoder = nn.Parameter(torch.zeros((nh * N, D)).normal_(std=0.02))
         self.encoder = nn.Parameter(torch.zeros((nh, D, N)).normal_(std=0.02))
-        self.attn = GDNFastAttnFLA(cfg, read_mode=read_mode, gate_mode=gate_mode, chunk=chunk)
+        self.attn = GDNFastAttnFLA(cfg, read_mode=read_mode, gate_mode=gate_mode, chunk=chunk,
+                                   chunk_self=chunk_self)
+        # 梯度检查点：为反向保存的 [B,nh,T,N] 激活改为反向时重算（数学精确等价，代价是前向多算一次）
+        self.grad_ckpt = grad_ckpt
         self.ln = nn.LayerNorm(D, elementwise_affine=False, bias=False)
         self.drop = nn.Dropout(0.0)
         self.encoder_v = nn.Parameter(torch.zeros((nh, D, N)).normal_(std=0.02))
@@ -156,6 +175,12 @@ class BDHBlockFLA(nn.Module):
             nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
     def forward(self, x, memories=None):
+        if self.grad_ckpt and self.training:
+            from torch.utils.checkpoint import checkpoint
+            return checkpoint(self._forward_impl, x, memories, use_reentrant=False)
+        return self._forward_impl(x, memories)
+
+    def _forward_impl(self, x, memories=None):
         C = self.config
         B = x.shape[0]; T = x.shape[2]
         D = self.D; nh = C.n_head
@@ -184,14 +209,15 @@ class BDHBlockFLALM(nn.Module):
     """LM 封装：embed -> BDHBlockFLA -> head。接口与 BDHBlockGDNCycleLM 一致。"""
 
     def __init__(self, D=128, nh=4, vocab=151936, n_layer=1, steps=1, mlp_mult=128, W=512,
-                 read_mode='raw', gate_mode='token', chunk=64):
+                 read_mode='raw', gate_mode='token', chunk=64, grad_ckpt=False, chunk_self=0):
         super().__init__()
         self.D = D; self.nh = nh; self.vocab = vocab; self.n_layer = n_layer
         self.steps = steps; self.W = W
         self.e = nn.Embedding(vocab, D)
         self.ln = nn.LayerNorm(D, elementwise_affine=False, bias=False)
         self.blocks = nn.ModuleList([BDHBlockFLA(D, nh, mlp_mult, vocab, steps=steps, W=W,
-                                                 read_mode=read_mode, gate_mode=gate_mode, chunk=chunk)
+                                                 read_mode=read_mode, gate_mode=gate_mode, chunk=chunk,
+                                                 grad_ckpt=grad_ckpt, chunk_self=chunk_self)
                                      for _ in range(n_layer)])
         self.head = nn.Linear(D, vocab, bias=False)
         self.apply(self._init_weights)

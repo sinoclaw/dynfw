@@ -587,3 +587,55 @@ complexity_fw_v6 / smoke_hidden_invariant / clash_small / pretrain_clash / probe
 - 长 T（8192, 1000 step）：**8241~8446**，tf 为 19652~19752 ⇒ **v6 赢 2.33×**（且 v6 仍在下降、tf 已到平台）
 - 速度（KL 交付口径 + compile）：T=8192 打平 / T=16K 快 2.3% / T=32K 快 6.3%
   （纯算力口径 CE 下 T=16K 快 27% / T=32K 快 85%）
+
+### 4.2i 显存根因溯源 + grad_ckpt 落地（2026-09-13，GPU 到期前收尾）
+
+**方法**：`torch.cuda.memory._record_memory_history(context='all')` → 按 `time_us` 重建时间线
+→ 取「在世字节总量最大那一刻」的在世分配集合 → 按调用栈聚合。
+**注意：必须用时间线重建，不能用「累计分配量」**（累计 23.33 GiB vs 真实峰值 4.75 GiB，两者不是一回事）。
+
+**峰值构成（T=8192 / batch=1 / fwd+bwd，重建值）**
+
+| 版本 | 重建峰值 | 构成 |
+|---|---|---|
+| **v6.7 base** | **4.7459 GiB** | FLA bwd 1.75(37%) / relu 0.75(16%) / rope 0.5(10.5%) / FLA 输入搬运 0.5(10.5%) / unwind 0.55(11.5%) / 其他 ~0.7 |
+| **v6.7 +grad_ckpt** | **3.3019 GiB** | FLA bwd 1.75(53%) / unwind 0.56 / relu 0.25 / rope 0.25 / 其他 |
+| **TF** | **0.6341 GiB** | flash bwd 0.25(39%) / 代理head 0.25 / layer_norm 0.02 / 其余极小 |
+
+**根因（三层，按性质分）**
+1. **结构代价（37%）**：FLA 反向工作区 ∝ `[B,T,nh,N]`，N=512；TF flash bwd ∝ `[B,T,nh,d]`，d=D/nh=8（代理配置）。**512/8=64×**（若按真实 head_dim=64 算则为 8×）。**任何 kernel 处理 512 宽输入都需大工作区。**
+2. **实现粗糙（约 42%）**：relu 保存整张 fp32 `x_sparse/y_sparse`（0.75 GiB，本可只存 mask）；RoPE 造 4 张临时（0.5 GiB）；FLA 输入 `permute().contiguous().to(bf16)`（0.5 GiB，纯布局债）；冗余累加。
+3. **库内部（11.5%）**：`torch::unwind`，不可控。
+
+**反证：显存差不是「FLA 用得不好」**
+| 版本 | 注意力实现 | 训练峰值 |
+|---|---|---|
+| v6.6 | 手写循环（无 FLA） | 5.56 GiB |
+| v6+opt5 | 手写融合（无 FLA） | 5.99 GiB |
+| **v6.7** | **FLA** | **5.13 GiB（三者最省）** |
+⇒ 不用 FLA 的版本显存更大。FLA 在显存上是帮忙的；差距来自「在 512 维宽空间算注意力」这一结构。
+
+**grad_ckpt（已实现，默认关）**
+- 改动：`BDHBlockFLA` 增 `grad_ckpt` 开关，`forward` 拆为外壳 + `_forward_impl`，开启时用 `torch.utils.checkpoint` 包裹；`BDHBlockFLALM` 透传；训练器增 `--grad-ckpt`。
+- 实测：**4.746 → 3.302 GiB（降 30.4%）**；**hidden maxdiff = 0.0000e+00（逐位一致，精确重算）**；**速度 69.6 → 88.9 ms（1.28×）**；**与 torch.compile 共存（88.7ms，maxdiff 仍 0）**。
+- 定位：**"显存吃紧时的可选档位"，不作默认**（默认关 ⇒ 现有读数不作废）。
+
+**chunk_self（已实现，已验证【无效】，默认关，不推荐）**
+- 把 self 项 `(q·k)v` 按 T 分块，避免整段物化 `[B,nh,T,N]`。
+- 实测：CH=4096/2048/1024/512/256 → 峰值 **5.130 → 5.102~5.106 GiB（仅降 0.5%）**，速度 **69.4 → 297.5ms（+329%）**。数值逐位一致（maxdiff=0）。
+- **结论：无效**。那 536MB 临时量不在峰值关键路径上（该时刻它已被释放）。**基于「前向峰值构成」推断「总峰值构成」是错的。**
+- ⚠️ **坑**：`chunk_self` 分块版 + `torch.compile` 数值错（maxdiff=2.610）。**原地写 `out[:,:,t0:t1] -= ...` 被 compile 重排，破坏写后读依赖**。分块 + 原地减 + compile 三者不能同用。
+
+**⚠️ 下一个待办（未做，GPU 到期中断）：全模型 fp32 → bf16**
+```
+查证：distill_qwen.py 里 bf16 只出现一次（第198行，只给教师模型 torch_dtype=bfloat16）
+      学生模型无 dtype 参数、无 autocast、无 GradScaler ⇒ 全程 fp32
+例外：v6.7 只有 FLA 段显式转 bf16（注释已写明"fp32 下 FLA 反向慢 11×"，实测 162.38 vs 14.70ms）
+含义：已知 bf16 快 11×，却只在被库逼着改的那一段用了 bf16
+影响：激活显存可减半（4.75 → ~2.4 GiB），elementwise 速度可大幅提升
+⚠️ 口径：TF 同为 fp32（无 autocast，q/k/v 全从 fp32 Linear 来）⇒ 历史对比同口径、排名有效，
+        但所有绝对数字虚高。改 bf16 后 TF 的 flash kernel 才会真正打开，两边都受益 ⇒ 谁获益多必须实测，不可预设。
+判据（跑前锁死）：J1 两边同时改 bf16 的显存/速度；J2 相对差距缩小还是不变；J3 长 T 重跑确认 5738.0 能力不漂。
+```
+
+**torch 升级（本轮已完成，见 §4.2h）**：2.5.1 → 2.7.1+cu126 ⇒ v6.7+compile 生效（51.4ms）；扫 T 显示 T≥16K 速度反超 TF。

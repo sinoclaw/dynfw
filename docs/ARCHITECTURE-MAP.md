@@ -666,3 +666,30 @@ J5 组合：bf16 + grad_ckpt 共存
 **⚠️ 未做**：GPU 到期，脚本已就绪未执行 ⇒ 本项状态为「代码就绪、待验证」，**不得当已完成的优化引用**。
 
 **预期（待实测，非结论）**：激活显存 4.75 → ~2.4 GiB；elementwise（占 v6.7 耗时 50%）走 bf16 后提速。
+
+### 4.2k 省显存行动清单 + rope_fast（2026-09-13）
+
+**峰值构成（T=8192/batch=1，时间线重建，4.746 GiB）与可省性**
+
+| 项目 | GiB | 占比 | 性质 | 动作 |
+|---|---|---|---|---|
+| FLA 反向工作区 | 1.750 | 36.9% | **结构**（N=512 宽空间） | 动不了，换 kernel 才行 |
+| relu 保存 x_sparse/y_sparse | 0.750 | 15.8% | 实现 | ✅ grad_ckpt 已覆盖（→0.25） |
+| torch::unwind | 0.547 | 11.5% | 库内部 | 动不了 |
+| **RoPE 的临时张量** | 0.500 | 10.5% | 实现 | ✅ **本轮 rope_fast（→~0.25）** |
+| FLA 输入 permute+contiguous+cast | 0.500 | 10.5% | **实现（布局债）** | 🔧 待做：布局 fuse（+提速） |
+| _forward_impl 累加等 | 0.254 | 5.4% | 实现 | 局部可优化 |
+| 其他（layer_norm 等） | 0.445 | 9.4% | 混合 | 小 |
+
+**已落地三项（全部默认关、可开关、不影响能力）**
+1. `--grad-ckpt`：4.746 → 3.302 GiB（**-30.4% 已实测**，hidden maxdiff=0，速度 1.28×）
+2. `--bf16`：代码就绪，预期再近减半（**待 GPU 验证**）
+3. `--rope-fast`：本轮新增。**实现直接取自 v6+opt5 的 `FWAttentionOpt.rope_fast`**（已验证等价，有 J1 背书），v6.7 此前漏用。省掉 `torch.stack` 那次分配，峰值 RoPE 部分 0.5 → ~0.25 GiB。
+
+**预期叠加（乐观，待实测）**：`4.746 →grad_ckpt→ 3.302 →rope/布局→ ~2.4 →bf16→ ~1.2 GiB`；对照 TF 0.634 GiB ⇒ 差距 7.5× → **~1.9×**。
+
+**⚠️ 明确不做的一项：权重 FP8 存储（W8A16）**
+A800 软件上可行（vLLM 用 Marlin kernel 支持 Ampere 的 weight-only FP8），但：
+- 官方明确 *"This may degrade performance"*；Transformer Engine 源码 `check_fp8_support()` 要求 cc ≥ 8.9 才能 FP8 **execution**
+- **我们权重仅占 0.17 GiB / 5.13 GiB（3%）**，压一半只省 0.085 GiB，且反量化增加开销 ⇒ **负收益**
+- 激活占 93%，而激活 FP8（W8A8）需要硬件 ⇒ A800 无路

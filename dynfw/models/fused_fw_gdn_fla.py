@@ -36,7 +36,8 @@ class GDNFastAttnFLA(nn.Module):
     参数与 GDNFastAttn 完全一致（gate: Linear(N,1)），保证权重可互转、可同 seed 对照。
     """
 
-    def __init__(self, config, read_mode='raw', gate_mode='token', chunk=64, chunk_self=0):
+    def __init__(self, config, read_mode='raw', gate_mode='token', chunk=64, chunk_self=0,
+                 rope_fast=False):
         super().__init__()
         if not _FLA_OK:
             raise RuntimeError('flash-linear-attention 不可用（需要 fla.ops.simple_gla.fused_chunk）')
@@ -46,6 +47,8 @@ class GDNFastAttnFLA(nn.Module):
         # chunk_self>0：把 self 项（(q·k)v）按 T 分块计算，避免整段物化 [B,nh,T,N]。
         # 只改计算顺序（fp32 累加顺序变化），不改数学；0 = 关闭（原行为）。
         self.chunk_self = chunk_self
+        # rope_fast=True：用切片赋值版 RoPE（省一次 stack 分配，数学等价）。默认 False 保原行为。
+        self._rope_fast = rope_fast
         self.config = config
         nh = config.n_head
         D = config.n_embd
@@ -66,6 +69,19 @@ class GDNFastAttnFLA(nn.Module):
         pc, ps = GDNFastAttnFLA.phases_cos_sin(phases)
         return (v * pc).to(v.dtype) + (v_rot * ps).to(v.dtype)
 
+    @staticmethod
+    def rope_fast(phases, v):
+        """数学等价于 rope()，但省掉 torch.stack 那次分配（用切片赋值直接写 buffer）。
+        与 fused_fw_fw_cycle_opt.FWAttentionOpt.rope_fast 同一实现（该版有 J1 数值背书）。
+        目的：降低峰值显存（RoPE 在峰值时刻占约 0.5 GiB，即 2 块 [B,nh,T,N] fp32）。
+        """
+        pc, ps = GDNFastAttnFLA.phases_cos_sin(phases)
+        out = (v * pc).to(v.dtype)
+        rot = torch.empty_like(v)
+        rot[..., 0::2] = -v[..., 1::2]
+        rot[..., 1::2] = v[..., ::2]
+        return out + (rot * ps).to(v.dtype)
+
     def forward(self, Q, K, V, memories=None, W=512):
         """Q,K:[B,nh,T,N] (K is Q); V:[B,1,T,D]; memories:[B,nh,N,D]。
         返回 (out, new_mem)，形状与 GDNFastAttn 完全一致。"""
@@ -74,7 +90,8 @@ class GDNFastAttnFLA(nn.Module):
         N, D = self.N, self.D
 
         r = torch.arange(0, T, device=self.freqs.device, dtype=self.freqs.dtype).view(1, 1, -1, 1)
-        QR = self.rope(r * self.freqs, Q)          # [B,nh,T,N]（与 v6.6 同）
+        _ph = r * self.freqs
+        QR = (self.rope_fast(_ph, Q) if self._rope_fast else self.rope(_ph, Q))   # [B,nh,T,N]（与 v6.6 同）
         KR = QR
 
         # ---- 门控 g（log 空间，<=0）----
@@ -148,7 +165,7 @@ class BDHBlockFLA(nn.Module):
     """与 BDHBlockGDNCycle 完全一致，唯一差异 = attn 用 GDNFastAttnFLA。"""
 
     def __init__(self, D, nh, mlp_mult, vocab, steps=1, W=512, read_mode='raw',
-                 gate_mode='token', chunk=64, grad_ckpt=False, chunk_self=0):
+                 gate_mode='token', chunk=64, grad_ckpt=False, chunk_self=0, rope_fast=False):
         super().__init__()
         from dynfw.models.fused_fw_gdn_cycle import Config
         cfg = Config(1, D, nh, mlp_mult, vocab)
@@ -157,7 +174,7 @@ class BDHBlockFLA(nn.Module):
         self.decoder = nn.Parameter(torch.zeros((nh * N, D)).normal_(std=0.02))
         self.encoder = nn.Parameter(torch.zeros((nh, D, N)).normal_(std=0.02))
         self.attn = GDNFastAttnFLA(cfg, read_mode=read_mode, gate_mode=gate_mode, chunk=chunk,
-                                   chunk_self=chunk_self)
+                                   chunk_self=chunk_self, rope_fast=rope_fast)
         # 梯度检查点：为反向保存的 [B,nh,T,N] 激活改为反向时重算（数学精确等价，代价是前向多算一次）
         self.grad_ckpt = grad_ckpt
         self.ln = nn.LayerNorm(D, elementwise_affine=False, bias=False)
@@ -209,7 +226,8 @@ class BDHBlockFLALM(nn.Module):
     """LM 封装：embed -> BDHBlockFLA -> head。接口与 BDHBlockGDNCycleLM 一致。"""
 
     def __init__(self, D=128, nh=4, vocab=151936, n_layer=1, steps=1, mlp_mult=128, W=512,
-                 read_mode='raw', gate_mode='token', chunk=64, grad_ckpt=False, chunk_self=0):
+                 read_mode='raw', gate_mode='token', chunk=64, grad_ckpt=False, chunk_self=0,
+                 rope_fast=False):
         super().__init__()
         self.D = D; self.nh = nh; self.vocab = vocab; self.n_layer = n_layer
         self.steps = steps; self.W = W
@@ -217,7 +235,8 @@ class BDHBlockFLALM(nn.Module):
         self.ln = nn.LayerNorm(D, elementwise_affine=False, bias=False)
         self.blocks = nn.ModuleList([BDHBlockFLA(D, nh, mlp_mult, vocab, steps=steps, W=W,
                                                  read_mode=read_mode, gate_mode=gate_mode, chunk=chunk,
-                                                 grad_ckpt=grad_ckpt, chunk_self=chunk_self)
+                                                 grad_ckpt=grad_ckpt, chunk_self=chunk_self,
+                                                 rope_fast=rope_fast)
                                      for _ in range(n_layer)])
         self.head = nn.Linear(D, vocab, bias=False)
         self.apply(self._init_weights)

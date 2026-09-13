@@ -66,7 +66,8 @@ def make_student(args, teacher_vocab, device):
                           read_mode=getattr(args, 'fw_read', 'raw'),
                           gate_mode=getattr(args, 'fla_gate', 'token'),
                           grad_ckpt=getattr(args, 'grad_ckpt', False),
-                          chunk_self=getattr(args, 'chunk_self', 0))
+                          chunk_self=getattr(args, 'chunk_self', 0),
+                          rope_fast=getattr(args, 'rope_fast', False))
 
     elif args.arch == 'tf':
         m = TF_sdpa(D=args.dim, nh=args.nh, n_layer=args.n_layer,
@@ -136,6 +137,8 @@ def main():
     ap.add_argument('--dla-k', type=int, default=16, help='DLA状态槽容量K(设小如4可触发合并)')
     ap.add_argument('--fw-read', type=str, default='raw', choices=['softmax', 'raw'],
                     dest='fw_read', help='v6 块内读侧: softmax(原版) / raw(对齐 BDH 官方)')
+    ap.add_argument('--rope-fast', action='store_true', dest='rope_fast',
+                    help='v6.7 用切片赋值版 RoPE（省一次 stack 分配，数学等价）；降峰值显存')
     ap.add_argument('--bf16', action='store_true', dest='bf16',
                     help='学生模型走 bf16 混合精度（torch.autocast bfloat16）：matmul 走 bf16、'
                          'LayerNorm/loss/优化器保 fp32。预期显存近半、速度提升；'
@@ -320,6 +323,7 @@ def main():
         'fw_read': getattr(args, 'fw_read', None),
         'slot_topk': getattr(args, 'slot_topk', None),
         'bf16': bool(getattr(args, 'bf16', False)),   # 口径标注：是否 bf16 混合精度
+        'rope_fast': bool(getattr(args, 'rope_fast', False)),  # 口径标注：RoPE 实现形态
         'cycle_steps': args.cycle_steps, 'mlp_mult': args.mlp_mult,
         'final_loss': final_loss, 'mean_loss': mean_loss,
         'ppl_est': ppl, 'wall_sec': wall, 'blocks': batch_x.size(0),

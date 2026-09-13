@@ -136,6 +136,10 @@ def main():
     ap.add_argument('--dla-k', type=int, default=16, help='DLA状态槽容量K(设小如4可触发合并)')
     ap.add_argument('--fw-read', type=str, default='raw', choices=['softmax', 'raw'],
                     dest='fw_read', help='v6 块内读侧: softmax(原版) / raw(对齐 BDH 官方)')
+    ap.add_argument('--bf16', action='store_true', dest='bf16',
+                    help='学生模型走 bf16 混合精度（torch.autocast bfloat16）：matmul 走 bf16、'
+                         'LayerNorm/loss/优化器保 fp32。预期显存近半、速度提升；'
+                         '⚠️ 会改变数值，须按判据 J1(数值)/J4(长T能力不漂) 验收后才可用。默认关。')
     ap.add_argument('--chunk-self', type=int, default=0, dest='chunk_self',
                     help='把 self 项 (q·k)v 按 T 分块计算（如 1024），避免整段物化 [B,nh,T,N]；0=关闭')
     ap.add_argument('--grad-ckpt', action='store_true', dest='grad_ckpt',
@@ -267,21 +271,27 @@ def main():
                 t_lg = torch.from_numpy(_t_np).to(device)            # 保持 fp16 常驻（省一半显存）
             else:
                 t_lg = torch.from_numpy(_t_np).to(device).float()
-            if args.chunk > 0:
-                # 分块路径：学生只产出 hidden(B,T,D)，lm_head 投影+KL 放进自定义 Function 分块做，
-                # 反向按块重算 —— 不物化 B×T×V logits（实测峰值 33GiB -> 7GiB，数值等价 fp64 1e-17）
-                assert hasattr(student, 'forward_hidden') and hasattr(student, 'head_params'), \
-                    f"{args.arch} 未实现 forward_hidden/head_params，无法走分块路径"
-                h = student.forward_hidden(bx)
-                W_h, b_h = student.head_params()
-                loss = chunked_kl_loss(h, W_h, b_h, t_lg, chunk=args.chunk,
-                                       temperature=args.temperature)
-            else:
-                if args.arch in ('tf', 'bdh', 'fusedfw_full', 'fusedfw_full_shared', 'fusedfw_lin', 'bdh_gla', 'bdh_gla2', 'bdh_gla3'):
-                    s_lg, _ = student.forward(bx)      # TF/BDH/FusedFWFull/FusedFWLin/BDHGLA/BDHGLAv2/BDHGLAv3 返回 (logits, loss)
+            # bf16 混合精度（--bf16）：autocast 只包前向+loss；backward/优化器保持默认。
+            # autocast 白名单保 fp32 的算子（LayerNorm/softmax/loss）不受影响；
+            # 代码里已有的显式 .float()（门控 logsigmoid、self 项累加、kl_loss）继续生效。
+            # ⚠️ 默认关 —— 开启会改变数值，须过 J1/J4 判据。
+            with torch.autocast('cuda', dtype=torch.bfloat16,
+                                enabled=bool(getattr(args, 'bf16', False)) and device == 'cuda'):
+                if args.chunk > 0:
+                    # 分块路径：学生只产出 hidden(B,T,D)，lm_head 投影+KL 放进自定义 Function 分块做，
+                    # 反向按块重算 —— 不物化 B×T×V logits（实测峰值 33GiB -> 7GiB，数值等价 fp64 1e-17）
+                    assert hasattr(student, 'forward_hidden') and hasattr(student, 'head_params'), \
+                        f"{args.arch} 未实现 forward_hidden/head_params，无法走分块路径"
+                    h = student.forward_hidden(bx)
+                    W_h, b_h = student.head_params()
+                    loss = chunked_kl_loss(h, W_h, b_h, t_lg, chunk=args.chunk,
+                                           temperature=args.temperature)
                 else:
-                    s_lg = student.forward_logits(bx)  # FusedFW 返回 logits
-                loss = kl_loss(s_lg.float(), t_lg, args.temperature)
+                    if args.arch in ('tf', 'bdh', 'fusedfw_full', 'fusedfw_full_shared', 'fusedfw_lin', 'bdh_gla', 'bdh_gla2', 'bdh_gla3'):
+                        s_lg, _ = student.forward(bx)      # TF/BDH/FusedFWFull/FusedFWLin/BDHGLA/BDHGLAv2/BDHGLAv3 返回 (logits, loss)
+                    else:
+                        s_lg = student.forward_logits(bx)  # FusedFW 返回 logits
+                    loss = kl_loss(s_lg.float(), t_lg, args.temperature)
             opt.zero_grad(); loss.backward(); opt.step()
             losses.append(loss.item())
             if args.snap_every > 0 and len(losses) % args.snap_every == 0:
@@ -309,6 +319,7 @@ def main():
         # （--read-mode，默认 softmaxK）而非真实读侧，会误导审计，已删除该字段。
         'fw_read': getattr(args, 'fw_read', None),
         'slot_topk': getattr(args, 'slot_topk', None),
+        'bf16': bool(getattr(args, 'bf16', False)),   # 口径标注：是否 bf16 混合精度
         'cycle_steps': args.cycle_steps, 'mlp_mult': args.mlp_mult,
         'final_loss': final_loss, 'mean_loss': mean_loss,
         'ppl_est': ppl, 'wall_sec': wall, 'blocks': batch_x.size(0),

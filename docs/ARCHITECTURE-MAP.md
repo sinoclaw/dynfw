@@ -639,3 +639,30 @@ complexity_fw_v6 / smoke_hidden_invariant / clash_small / pretrain_clash / probe
 ```
 
 **torch 升级（本轮已完成，见 §4.2h）**：2.5.1 → 2.7.1+cu126 ⇒ v6.7+compile 生效（51.4ms）；扫 T 显示 T≥16K 速度反超 TF。
+
+### 4.2j bf16 混合精度接入（2026-09-13，代码已改，待 GPU 验收）
+
+**问题**：学生模型此前**全程 fp32** —— `distill_qwen.py` 里 `bfloat16` 只出现一次且只给教师模型；
+无 `autocast`、无 `GradScaler`。而 v6.7 代码注释里早写着「fp32 下 FLA 反向慢 11×」（实测 162.38 vs 14.70ms）
+—— **已知 bf16 快 11×，却只在被库逼着改的那一段用了 bf16**（`q_f/k_f/v_f/g_f` 转 bf16 喂 FLA）。
+
+**已改（默认关，现有读数不作废）**
+- `distill_qwen.py` 增 `--bf16`：`torch.autocast('cuda', dtype=torch.bfloat16)` **只包前向 + loss**；
+  backward / 优化器保持默认（参数仍 fp32 master weights）。
+- 安全性依据：`chunked_kl.ChunkedLinearKL` 内部强制 `cdtype=torch.float32` 累加且跑在自定义 Function 里，
+  对 autocast 免疫；代码中已有的显式 `.float()`（门控 `logsigmoid`、self 项累加、`kl_loss`）继续生效。
+- 结果 json 增 `bf16` 字段（口径标注）。
+
+**判据（跑前锁死，脚本 `benchmarks/verify_bf16.py`）**
+```
+J1 数值：bf16 vs fp32 的 hidden/loss 差异在 bf16 容差内（fp32 为基准）
+J2 显存：bf16 峰值应显著下降（目标接近减半）
+J3 速度：bf16 应更快（报确切倍数）
+J4 公平：TF 也同测 bf16 ⇒ 报「相对差距在 fp32 与 bf16 下各是多少」，不预设我们获益更多
+        （TF 在 fp32 下 SDPA 用不上 flash kernel，改 bf16 后双方都受益）
+J5 组合：bf16 + grad_ckpt 共存
+```
+**⚠️ 口径**：TF 同为 fp32 ⇒ 历史对比同口径、**排名有效**，但**所有绝对数字（含 5.13 vs 0.95 GiB）虚高**。
+**⚠️ 未做**：GPU 到期，脚本已就绪未执行 ⇒ 本项状态为「代码就绪、待验证」，**不得当已完成的优化引用**。
+
+**预期（待实测，非结论）**：激活显存 4.75 → ~2.4 GiB；elementwise（占 v6.7 耗时 50%）走 bf16 后提速。
